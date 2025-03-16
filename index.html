@@ -1,3 +1,1217 @@
-<html><head><base href="abandonedmuse" /><title>abandonedmuse</title>
-  <style>  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } .loading-spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #2196f3; border-right: 3px solid #2196f3; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite; box-shadow: 0 0 10px rgba(33,150,243,0.2); } .loading-container { width: 100%; display: flex; justify-content: center; padding: 2rem 0; opacity: 0.8; } @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } } .loading-container { animation: pulse 2s ease-in-out infinite; } .value.joined { display: flex; flex-direction: column; align-items: center; } .value.joined .ago { font-size: 0.9rem; color: #aaa; margin-top: -0.5rem; } #animated-background { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; } .container { position: relative; z-index: 1; } *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #ffffff; background: #121212; padding: 2rem; } .container { max-width: 1200px; margin: 0 auto; } .profile-header { background: #1e1e1e; border-radius: 1rem; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: grid; grid-template-columns: auto 1fr; gap: 2rem; } .avatar { width: 150px; height: 150px; border-radius: 50%; background: #2a2a2a; } .profile-info h1 { font-size: 2.5rem; } .profile-info h1 span { outline: none; border-bottom: 1px dashed #555; padding: 0 4px; } .username-hint { font-size: 0.8rem; color: #666; margin-left: 1rem; opacity: 1; transition: opacity 0.3s ease; user-select: none; cursor: default; } .username-hint.hidden { opacity: 0; } #username[contenteditable=true]:hover { background: rgba(33, 150, 243, 0.1); border-radius: 4px; cursor: text; } #username[contenteditable=true]:focus { background: rgba(33, 150, 243, 0.2); border-radius: 4px; } .social-links { display: flex; gap: 1rem; margin: 1rem 0; } .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; margin-top: -1rem; } .stat-card { background: #1e1e1e; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-align: center; } .stat-card h3 { color: #aaa; font-size: 1.3rem; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: center; } .stat-card .value { font-size: 3rem; font-weight: bold; color: #ffffff; text-align: center; } .view-button { background: #2a2a2a; border: none; color: #aaa; padding: 0.8rem 1.5rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; font-size: 1.1rem; } .view-button:hover { background: #333; color: #fff; } .view-button.active { background: #2196f3; color: #fff; } .view-content { margin-top: 1.5rem; } .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; } .card { background: #2a2a2a; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s; } .card:hover { transform: translateY(-2px); } .card-content { padding: 1rem; } .card h3 { margin-bottom: 0.5rem; } .card-meta { font-size: 0.9rem; color: #aaa; } .loading-container { width: 100%; display: flex; justify-content: center; padding: 2rem 0; } .recent-follower-card { background: #1e1e1e; padding: 1.5rem; min-height: 100%; border-radius: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; flex-direction: column; align-items: center; gap: 1rem; } .recent-follower-card h3 { color: #aaa; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: center; } .recent-follower-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; } .recent-follower-name { font-size: 1.1rem; color: #ffffff; text-align: center; } .load-more { display: none; margin: 2rem auto; padding: 1rem 2rem; background: #2196f3; border: none; border-radius: 0.5rem; color: white; cursor: pointer; font-size: 1.1rem; transition: background 0.2s; } .load-more:hover { background: #1976d2; } .preview-image { width: 100%; height: 200px; background: #2a2a2a; object-fit: cover; transition: opacity 0.2s; } .card { background: #2a2a2a; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s; text-decoration: none; } .card:hover { transform: translateY(-2px); } .card:hover .preview-image { opacity: 0.9; } .card-stats { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.9rem; color: #aaa; } .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; } .user-card { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; color: inherit; transition: transform 0.2s ease; /* Add smooth transition */ } .user-card:hover { transform: scale(1.05); /* Scale up on hover */ } .user-avatar { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 0.5rem; background: #eee; } .user-name { font-size: 0.9rem; color: #ffffff; word-break: break-word; } .sort-controls { margin-bottom: 1.5rem; display: flex; gap: 0.5rem; } .sort-button { background: #2a2a2a; border: none; color: #aaa; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; } .sort-button:hover { background: #333; color: #fff; } .sort-button.active { background: #2196f3; color: #fff; } .search-box { position: fixed; top: 20px; right: 20px; display: none; z-index: 100; } .search-input { padding: 8px 12px; border-radius: 4px; border: 1px solid #2196f3; background: #2a2a2a; color: white; font-size: 16px; width: 200px; } .search-input::placeholder { color: #aaa; } .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 1000; } .modal-overlay.active { opacity: 1; visibility: visible; } .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.7); background: #1e1e1e; border-radius: 1rem; opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 1001; width: 80vw; height: 80vh; display: flex; flex-direction: column; } .modal.active { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); } .modal-close { position: absolute; top: -40px; right: 0; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; padding: 0.5rem; transition: transform 0.2s; } .modal-close:hover { transform: scale(1.1); } .modal iframe { width: 100%; height: 100%; border: none; border-radius: 1rem; flex: 1; margin-bottom: 10px; /* Add space for the link */ } .open-new-tab { text-align: center; padding: 10px; text-decoration: none; color: #2196f3; font-size: 1rem; transition: color 0.2s; } .open-new-tab:hover { color: #1976d2; } #recent-follower { cursor: pointer; transition: transform 0.2s ease; /* Add smooth transition */ } #recent-follower:hover { transform: scale(1.05); /* Scale up on hover */ } </style></head><body> <canvas id="animated-background"></canvas> <div class="container" id="app"> <div class="search-box"> <input type="text" class="search-input" placeholder="Enter username..." id="user-search"> </div> <div style="display: grid; grid-template-columns: 1fr auto; gap: 2rem; margin-bottom: 2rem;"> <div class="profile-header"> <img class="avatar" id="avatar" alt="Profile avatar"> <div class="profile-info"> <h1> <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed #555; padding: 0 4px;"></span> <span class="username-hint">← You can edit the name!</span> </h1> <p id="description"></p> <div class="social-links"> </div> </div> </div> <div class="stat-card recent-follower-card" style="margin: 0; height: fit-content;"> <h3>🥰 Latest Follower</h3> <div id="recent-follower"> <div class="loading-spinner"></div> </div> </div> </div> <div class="stats"> <div class="stat-card"> <h3>🌐 Projects</h3> <div class="value" id="sites-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>👁️ Views</h3> <div class="value" id="views-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>❤️ Likes</h3> <div class="value" id="likes-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>🥰 Followers</h3> <div class="value" id="followers-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>😍 Following</h3> <div class="value" id="following-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>🎉 Popularity</h3> <div class="value" id="popularity-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>⭐ Quality</h3> <div class="value" id="rating-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>📅 Joined</h3> <div class="value" id="joined-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>👥 Friends</h3> <div class="value" id="friends-count"><div class="loading-spinner"></div></div> </div> <div class="stat-card"> <h3>🤫 Unposted</h3> <div class="value" id="unposted-count"><div class="loading-spinner"></div></div> </div> </div> <iframe src="https://websim.ai/@abandonedmuse/my-projects" style="width: 100%; height: 600px; border: none; border-radius: 1rem; margin: 2rem 0; background: #1e1e1e;" title="My Projects"> </iframe> <div class="content-section"> <div class="sort-controls"> <button class="view-button active" data-view="projects">Projects</button> <button class="view-button" data-view="followers">Followers</button> <button class="view-button" data-view="following">Following</button> <button class="view-button" data-view="friends">Friends</button> </div> <div id="projects-view" class="view-content"> <div class="sort-controls"> <button class="sort-button active" data-sort="recent">Recent</button> <button class="sort-button" data-sort="views">Most Viewed</button> <button class="sort-button" data-sort="likes">Most Liked</button> </div> <div class="grid" id="projects-grid"></div> <div class="loading-container" id="projects-loading"> <div class="loading-spinner"></div> </div> <button id="load-more-projects" class="load-more">Load More</button> </div> <div id="followers-view" class="view-content" style="display:none"> <div class="user-grid" id="followers-grid"></div> <div class="loading-container" id="followers-loading"> <div class="loading-spinner"></div> </div> </div> <div id="following-view" class="view-content" style="display:none"> <div class="user-grid" id="following-grid"></div> <div class="loading-container" id="following-loading"> <div class="loading-spinner"></div> </div> </div> <div id="friends-view" class="view-content" style="display:none"> <div class="user-grid" id="friends-grid"></div> <div class="loading-container" id="friends-loading"> <div class="loading-spinner"></div> </div> </div> </div> </div> <div class="modal-overlay"> <div class="modal"> <button class="modal-close">×</button> <iframe></iframe> <a class="open-new-tab" target="_blank">↗️ Open in new tab</a> </div> </div> <script> const room = new WebsimSocket(); async function storeUserStats(stats) { await room.store.update({ id: 'user_stats', dependencies: { stats }, updateFunction: (records) => { if (!records) records = {}; // Remove old record for this user if exists const newRecords = {...records}; if(newRecords[stats.username]) { delete newRecords[stats.username]; } // Add new record newRecords[stats.username] = { ...stats, timestamp: new Date().toISOString() }; return newRecords; } }); } async function calculatePercentile(value, statName) { const records = await room.store.get('user_stats'); if (!records) return null; const values = Object.values(records).map(r => r[statName]); values.sort((a, b) => b - a); // Sort descending const position = values.findIndex(v => v <= value) + 1; const percentile = Math.round((1 - (position / values.length)) * 100); return 100 - percentile; } async function updateStatWithPercentile(elementId, value, statName) { const element = document.getElementById(elementId); // If value is NaN, undefined, null, or 0 and not fully loaded yet, show loading spinner if (isNaN(value) || value === undefined || value === null || value === 0) { element.innerHTML = '<div class="loading-spinner"></div>'; return; } const percentile = await calculatePercentile(value, statName); let add = ""; if (statName === 'popularity') { add = "/10"; } if (statName === 'rating') { add = "/5"; } if (percentile === null || isNaN(percentile)) { element.innerHTML = `${value}`; } else { element.innerHTML = ` ${value}${add} <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;"> Top ${percentile}% </div> `; } } let username = 'abandonedmuse'; let projectsAfterCursor = null; let followersAfterCursor = null; let followingAfterCursor = null; let friendsAfterCursor = null; let currentSort = 'recent'; let projectsData = []; function getRelativeTimeString(date) { const now = new Date(); const diffMs = now - date; const diffSecs = Math.floor(diffMs / 1000); const diffMins = Math.floor(diffSecs / 60); const diffHours = Math.floor(diffMins / 60); const diffDays = Math.floor(diffHours / 24); const diffMonths = Math.floor(diffDays / 30); const diffYears = Math.floor(diffDays / 365); if (diffYears > 0) { return `${diffYears}y`; } else if (diffMonths > 0) { return `${diffMonths}mo`; } else if (diffDays > 0) { return `${diffDays}d`; } else if (diffHours > 0) { return `${diffHours}h`; } else if (diffMins > 0) { return `${diffMins}m`; } else { return `${diffSecs}s`; } } async function fetchUserProfile() { const response = await fetch(`/api/v1/users/${username}`); const data = await response.json(); return data.user; } async function fetchFollowingCount() { const response = await fetch(`/api/v1/users/${username}/following?count=true`); const data = await response.json(); return data.following.meta.count; } async function fetchFollowersCount() { const response = await fetch(`/api/v1/users/${username}/followers?count=true`); const data = await response.json(); return data.followers.meta.count; } async function fetchProjects(afterCursor = null) { const params = new URLSearchParams(); if (afterCursor) params.append('after', afterCursor); params.append('first', '100'); params.append('posted', 'true'); params.append('sort_by', 'updated_at'); const response = await fetch(`/api/v1/users/${username}/projects?${params}`); const data = await response.json(); return { data: data.projects.data.map(item => ({ project: item.project, project_revision: item.project_revision, site: item.site, cursor: item.cursor })), meta: data.projects.meta }; } async function fetchFollowers(afterCursor = null) { const params = new URLSearchParams(); if (afterCursor) params.append('after', afterCursor); params.append('first', '100'); const response = await fetch(`/api/v1/users/${username}/followers?${params}`); const data = await response.json(); return data.followers; } async function fetchFollowing(afterCursor = null) { const params = new URLSearchParams(); if (afterCursor) params.append('after', afterCursor); params.append('first', '100'); const response = await fetch(`/api/v1/users/${username}/following?${params}`); const data = await response.json(); return data.following; } async function fetchRecentFollower() { const response = await fetch(`/api/v1/users/${username}/followers?first=1`); const data = await response.json(); if (data.followers.data.length > 0) { const follower = data.followers.data[0].follow.user; const recentFollowerEl = document.getElementById('recent-follower'); recentFollowerEl.innerHTML = ` <img class="recent-follower-avatar" src="${follower.avatar_url || ''}" alt="Recent follower avatar"> <div class="recent-follower-name">${follower.username}</div> `; recentFollowerEl.style.cursor = 'pointer'; // Add pointer cursor } } async function fetchUnpostedProjects() { const params = new URLSearchParams(); params.append('first', '100'); params.append('posted', 'false'); // First batch const response = await fetch(`/api/v1/users/${username}/projects?${params}`); const data = await response.json(); let totalCount = data.projects.data.length; let hasNextPage = data.projects.meta.has_next_page; let nextCursor = data.projects.meta.end_cursor; // Keep fetching if there are more pages while (hasNextPage) { params.set('after', nextCursor); const nextResponse = await fetch(`/api/v1/users/${username}/projects?${params}`); const nextData = await nextResponse.json(); totalCount += nextData.projects.data.length; hasNextPage = nextData.projects.meta.has_next_page; nextCursor = nextData.projects.meta.end_cursor; } return totalCount; } async function loadMoreProjects() { try { const data = await fetchProjects(projectsAfterCursor); const loadingEl = document.getElementById('projects-loading'); const loadMoreBtn = document.getElementById('load-more-projects'); loadingEl.style.display = 'block'; loadMoreBtn.style.display = 'none'; projectsData = projectsData.concat(data.data); if (data.meta.has_next_page) { projectsAfterCursor = data.meta.end_cursor; await loadMoreProjects(); // Recursively load more until done } else { // Update with loading wheels first document.getElementById('sites-count').innerHTML = '<div class="loading-spinner"></div>'; document.getElementById('views-count').innerHTML = '<div class="loading-spinner"></div>'; document.getElementById('likes-count').innerHTML = '<div class="loading-spinner"></div>'; document.getElementById('popularity-count').innerHTML = '<div class="loading-spinner"></div>'; document.getElementById('rating-count').innerHTML = '<div class="loading-spinner"></div>'; // Calculate stats and update ALL project-related stats only after all projects loaded const stats = projectsData.reduce((acc, { project }) => ({ views: acc.views + project.stats.views, likes: acc.likes + project.stats.likes, sites: acc.sites + 1 }), { views: 0, likes: 0, sites: 0 }); // Calculate and update popularity score let popularityScore = 0; if (stats.views >= 20000 && stats.likes >= 325) { popularityScore = 10; } else if (stats.views >= 10000 && stats.likes >= 250) { popularityScore = 9; } else if (stats.views >= 5000 && stats.likes >= 120) { popularityScore = 8; } else if (stats.views >= 2500 && stats.likes >= 75) { popularityScore = 7; } else if (stats.views >= 1000 && stats.likes >= 40) { popularityScore = 6; } else if (stats.views >= 500 && stats.likes >= 20) { popularityScore = 5; } else if (stats.views >= 250 && stats.likes >= 10) { popularityScore = 4; } else if (stats.views >= 100 && stats.likes >= 5) { popularityScore = 3; } else if (stats.likes >= 10) { popularityScore = 2; } else if (stats.views >= 10) { popularityScore = 1; } // Calculate rating let rating = 0; if (stats.views > 0) { const viewsPerLike = stats.views / stats.likes; if (viewsPerLike >= 100) { rating = 1; } else if (viewsPerLike >= 75) { rating = 2; } else if (viewsPerLike >= 65) { rating = 3; } else if (viewsPerLike >= 50) { rating = 4; } else { rating = 5; } if (stats.likes === 0) { rating = 0; } } const userStats = { username: username, projects: stats.sites, views: stats.views, likes: stats.likes, followers: parseInt(document.getElementById('followers-count').textContent) || 0, following: parseInt(document.getElementById('following-count').textContent) || 0, friends: parseInt(document.getElementById('friends-count').textContent) || 0, popularity: popularityScore, rating: rating, unposted: parseInt(document.getElementById('unposted-count').textContent) || 0 }; // Store stats first await storeUserStats(userStats); // Then update each stat with percentile await updateStatWithPercentile('sites-count', userStats.projects, 'projects'); await updateStatWithPercentile('views-count', userStats.views, 'views'); await updateStatWithPercentile('likes-count', userStats.likes, 'likes'); await updateStatWithPercentile('followers-count', userStats.followers, 'followers'); await updateStatWithPercentile('following-count', userStats.following, 'following'); await updateStatWithPercentile('friends-count', userStats.friends, 'friends'); await updateStatWithPercentile('popularity-count', userStats.popularity, 'popularity'); await updateStatWithPercentile('rating-count', userStats.rating, 'rating'); await updateStatWithPercentile('unposted-count', userStats.unposted, 'unposted'); sortProjects(); // Call sortProjects after loading projects loadingEl.style.display = 'none'; } } catch (error) { console.error('Error loading more projects:', error); document.getElementById('projects-loading').style.display = 'none'; } } function resetStatsToLoading() { const spinnerHtml = '<div class="loading-spinner"></div>'; document.getElementById('views-count').innerHTML = spinnerHtml; document.getElementById('sites-count').innerHTML = spinnerHtml; document.getElementById('likes-count').innerHTML = spinnerHtml; document.getElementById('followers-count').innerHTML = spinnerHtml; document.getElementById('following-count').innerHTML = spinnerHtml; document.getElementById('friends-count').innerHTML = spinnerHtml; document.getElementById('popularity-count').innerHTML = spinnerHtml; document.getElementById('rating-count').innerHTML = spinnerHtml; document.getElementById('unposted-count').innerHTML = spinnerHtml; document.getElementById('joined-count').innerHTML = spinnerHtml; document.getElementById('description').innerHTML = spinnerHtml; } async function loadMoreFollowers() { const followersData = await fetchFollowers(followersAfterCursor); const loadingEl = document.getElementById('followers-loading'); loadingEl.style.display = 'block'; // Show while loading const followersGrid = document.getElementById('followers-grid'); followersData.data.forEach(({ follow }) => { followersGrid.appendChild(createUserCard(follow.user)); }); followersAfterCursor = followersData.meta.end_cursor; if (followersData.meta.has_next_page) { loadMoreFollowers(); } else { loadingEl.style.display = 'none'; // Hide when done loading } } async function loadMoreFollowing() { const followingData = await fetchFollowing(followingAfterCursor); const loadingEl = document.getElementById('following-loading'); loadingEl.style.display = 'block'; // Show while loading const followingGrid = document.getElementById('following-grid'); followingData.data.forEach(({ follow }) => { followingGrid.appendChild(createUserCard(follow.user)); }); followingAfterCursor = followingData.meta.end_cursor; if (followingData.meta.has_next_page) { loadMoreFollowing(); } else { loadingEl.style.display = 'none'; // Hide when done loading } } async function getFriends() { // Get all following const following = await fetchFollowing(); const followers = await fetchFollowers(); // Create sets of usernames const followingUsers = new Set(following.data.map(f => f.follow.user.username)); const followerUsers = new Set(followers.data.map(f => f.follow.user.username)); // Find intersection (mutual follows) const friends = following.data.filter(f => followerUsers.has(f.follow.user.username) ).map(f => f.follow.user); // Update friends count document.getElementById('friends-count').textContent = friends.length; // Display friends in grid const friendsGrid = document.getElementById('friends-grid'); friendsGrid.innerHTML = ''; friends.forEach(friend => { friendsGrid.appendChild(createUserCard(friend)); }); // Hide loading spinner document.getElementById('friends-loading').style.display = 'none'; } // Update initProfile() to include friends async function initProfile() { // Add the function to sort and display the projects function sortProjects() { const projectsGrid = document.getElementById('projects-grid'); projectsGrid.innerHTML = ''; // Clear current projects // Clone the array to avoid modifying original data let sortedProjects = [...projectsData]; // Sort based on current sort selection switch(currentSort) { case 'views': sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views); break; case 'likes': sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes); break; case 'recent': default: sortedProjects.sort((a, b) => new Date(b.project.updated_at) - new Date(a.project.updated_at) ); break; } // Create and append card for each project sortedProjects.forEach(({ project, project_revision, site }) => { const card = createProjectCard(project, project_revision, site); projectsGrid.appendChild(card); }); } try { document.querySelector('.username-hint').classList.add('hidden'); // Add this line at the start resetStatsToLoading(); // Show loading spinners const user = await fetchUserProfile(); document.getElementById('username').textContent = `${user.username}`; document.getElementById('avatar').src = user.avatar_url || ''; // Initialize background with avatar URL initBackground(user.avatar_url || ''); // Rest of the function remains the same... // Update joined date display const joinedEl = document.getElementById('joined-count'); joinedEl.className = 'value joined'; const joinedDate = new Date(user.created_at); joinedEl.innerHTML = ` <div>${getRelativeTimeString(joinedDate)}</div> <div class="ago">ago</div> `; const [followingCount, followersCount] = await Promise.all([ fetchFollowingCount(), fetchFollowersCount() ]); await fetchRecentFollower(); await updateStatWithPercentile('following-count', followingCount, 'following'); await updateStatWithPercentile('followers-count', followersCount, 'followers'); await loadMoreProjects(); await loadMoreFollowers(); await loadMoreFollowing(); await getFriends(); // Then fetch unposted count last const unpostedCount = await fetchUnpostedProjects(); document.getElementById('unposted-count').textContent = unpostedCount; document.querySelectorAll('.sort-button').forEach(button => { button.addEventListener('click', () => { // Update active state document.querySelectorAll('.sort-button').forEach(b => b.classList.remove('active')); button.classList.add('active'); // Update sort and re-sort projects currentSort = button.dataset.sort; sortProjects(); }); }); document.querySelectorAll('.view-button').forEach(button => { button.addEventListener('click', async () => { // Update active state document.querySelectorAll('.view-button').forEach(b => b.classList.remove('active')); button.classList.add('active'); // Hide all views document.querySelectorAll('.view-content').forEach(view => { view.style.display = 'none'; }); const viewType = button.dataset.view; const viewElement = document.getElementById(`${viewType}-view`); viewElement.style.display = 'block'; // Load content if not already loaded if (viewType === 'followers' && !followersAfterCursor) { await loadMoreFollowers(); } else if (viewType === 'following' && !followingAfterCursor) { await loadMoreFollowing(); } else if (viewType === 'friends') { await getFriends(); } }); }); // Set bio text after loading all data const bioText = generateBioText(user, projectsData, document.getElementById('following-count').textContent, document.getElementById('followers-count').textContent ); document.getElementById('description').innerHTML = bioText; } catch (error) { console.error('Error loading profile:', error); } } let rPressCount = 0; let rPressTimer = null; // Handle R key presses document.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'r') { rPressCount++; clearTimeout(rPressTimer); rPressTimer = setTimeout(() => { rPressCount = 0; }, 1000); if (rPressCount === 3) { document.querySelector('.search-box').style.display = 'block'; rPressCount = 0; } } }); document.getElementById('user-search').addEventListener('keypress', async (e) => { if (e.key === 'Enter') { // Hide hint when searching new user document.querySelector('.username-hint').classList.add('hidden'); resetStatsToLoading(); // Show loading spinners // Remove @ if present and trim whitespace let searchUsername = e.target.value.trim().replace('@', ''); // Update iframe source based on username const iframe = document.querySelector('iframe'); if (iframe) { iframe.src = searchUsername === 'abandonedmuse' ? 'https://websim.ai/@abandonedmuse/my-projects' : `https://websim.ai/@${searchUsername}`; } // Reset data structures projectsData = []; projectsAfterCursor = null; followersAfterCursor = null; followingAfterCursor = null; // Clear existing grids document.getElementById('projects-grid').innerHTML = ''; document.getElementById('followers-grid').innerHTML = ''; document.getElementById('following-grid').innerHTML = ''; document.getElementById('friends-grid').innerHTML = ''; // Update username and reload data username = searchUsername; await initProfile(); // Hide search box after search document.querySelector('.search-box').style.display = 'none'; e.target.value = ''; } }); document.getElementById('recent-follower').addEventListener('click', function() { if (this.querySelector('.recent-follower-name')) { const username = this.querySelector('.recent-follower-name').textContent; document.getElementById('username').textContent = username; // Reset data structures and reload for new user projectsData = []; projectsAfterCursor = null; followersAfterCursor = null; followingAfterCursor = null; // Clear existing grids document.getElementById('projects-grid').innerHTML = ''; document.getElementById('followers-grid').innerHTML = ''; document.getElementById('following-grid').innerHTML = ''; document.getElementById('friends-grid').innerHTML = ''; resetStatsToLoading(); // Update username and iframe const iframe = document.querySelector('iframe'); if (iframe) { iframe.src = `https://websim.ai/@${username}`; } // Reload profile username = this.querySelector('.recent-follower-name').textContent; initProfile(); } }); initProfile(); function createUserCard(user) { const card = document.createElement('a'); card.href = `https://websim.ai/@${user.username}`; card.className = 'user-card'; card.innerHTML = ` <img class="user-avatar" src="${user.avatar_url || ''}" alt="${user.username}'s avatar"> <div class="user-name">${user.username}</div> `; // Add click handler card.addEventListener('click', async (e) => { e.preventDefault(); // Update username field const usernameEl = document.getElementById('username'); usernameEl.textContent = user.username; // Hide hint when clicking new user document.querySelector('.username-hint').classList.add('hidden'); // Scroll to top smoothly window.scrollTo({ top: 0, behavior: 'smooth' }); // Update iframe source const iframe = document.querySelector('iframe'); if (iframe) { iframe.src = `https://websim.ai/@${user.username}`; } // Reset data structures projectsData = []; projectsAfterCursor = null; followersAfterCursor = null; followingAfterCursor = null; // Clear existing grids document.getElementById('projects-grid').innerHTML = ''; document.getElementById('followers-grid').innerHTML = ''; document.getElementById('following-grid').innerHTML = ''; document.getElementById('friends-grid').innerHTML = ''; resetStatsToLoading(); // Update username and reload data username = user.username; await initProfile(); }); return card; } function createProjectCard(project, project_revision, site) { const card = document.createElement('div'); card.className = 'card'; // Only add preview image if there's a site const previewHtml = site ? `<img class="preview-image" src="https://images.websim.ai/v1/site/${site.id}/600" alt="Preview of ${project.title || 'Untitled Project'}" loading="lazy">` : `<div class="preview-image"></div>`; card.innerHTML = ` <div class="project-link" style="text-decoration: none; color: inherit; cursor: pointer;"> ${previewHtml} <div class="card-content"> <h3>${project.title || 'Untitled Project'}</h3> <div class="card-stats"> <span>👁️ ${project.stats.views}</span> <span>❤️ ${project.stats.likes}</span> </div> <div class="card-meta"> ${getRelativeTimeString(new Date(project.created_at))} ago </div> </div> </div> `; // Add click handler const projectLink = card.querySelector('.project-link'); projectLink.addEventListener('click', (e) => { e.preventDefault(); const modal = document.querySelector('.modal'); const overlay = document.querySelector('.modal-overlay'); const iframe = modal.querySelector('iframe'); const projectUrl = `https://websim.ai/p/${project.id}`; // Set iframe source iframe.src = projectUrl; // Add or update "Open in new tab" link let openNewTab = modal.querySelector('.open-new-tab'); if (!openNewTab) { openNewTab = document.createElement('a'); openNewTab.className = 'open-new-tab'; openNewTab.target = '_blank'; openNewTab.textContent = '↗️ Open in new tab'; modal.appendChild(openNewTab); } openNewTab.href = projectUrl; // Simply add active classes to trigger centered animation overlay.classList.add('active'); modal.classList.add('active'); }); return card; } // Update the close handler document.querySelector('.modal-close').addEventListener('click', () => { const modal = document.querySelector('.modal'); const overlay = document.querySelector('.modal-overlay'); modal.classList.remove('active'); overlay.classList.remove('active'); // Clear iframe src and remove link after animation setTimeout(() => { modal.querySelector('iframe').src = ''; const openNewTab = modal.querySelector('.open-new-tab'); if (openNewTab) { openNewTab.remove(); } }, 300); }); // Close on overlay click document.querySelector('.modal-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) { document.querySelector('.modal-close').click(); } }); function generateBioText(user, projectsData, followingCount, followersCount) { if (!projectsData.length) return ''; // Remove any "Top n%" text from numbers by taking just the first number const cleanNumber = (numStr) => { if (!numStr) return '0'; return numStr.split('\n')[0].trim(); }; let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `; const totalViews = projectsData.reduce((acc, { project }) => acc + project.stats.views, 0); const projectsCount = projectsData.length; bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`; if (totalViews > 0) { bioText += ` with ${totalViews} total views`; } bioText += '. '; const latestProject = [...projectsData].sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at))[0].project; const mostViewedProject = [...projectsData].sort((a, b) => b.project.stats.views - a.project.stats.views)[0].project; const mostLikedProject = [...projectsData].sort((a, b) => b.project.stats.likes - a.project.stats.likes)[0].project; // Only show latest project if there is one bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: #2196f3;">${latestProject.title || 'Untitled'}</a>`; // Only mention creation date if it's different from join date const projectDate = new Date(latestProject.created_at).toLocaleDateString(); if (projectDate !== new Date(user.created_at).toLocaleDateString()) { bioText += ` which I made on ${projectDate}`; } bioText += '. '; // Only show most viewed project if it has views if (mostViewedProject.stats.views > 0) { bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: #2196f3;">${mostViewedProject.title || 'Untitled'}</a> with ${mostViewedProject.stats.views} views. `; } // Only show most liked project if it has likes if (mostLikedProject.stats.likes > 0) { bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: #2196f3;">${mostLikedProject.title || 'Untitled'}</a> with ${mostLikedProject.stats.likes} likes. `; } // Only show following/followers if there are any let socialText = []; // Clean the numbers from any "Top n%" text const cleanFollowingCount = cleanNumber(followingCount); const cleanFollowersCount = cleanNumber(followersCount); if (parseInt(cleanFollowingCount) > 0) { socialText.push(`I'm following ${cleanFollowingCount} people`); } if (parseInt(cleanFollowersCount) > 0) { socialText.push(`${cleanFollowersCount} ${parseInt(cleanFollowersCount) === 1 ? 'person who follows' : 'people who follow'} me`); } if (socialText.length > 0) { bioText += socialText.join(' and '); } return bioText; } class FloatingImage { constructor(canvas, imgSrc, x, y) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.x = x; this.y = y; this.size = 60; this.dx = (Math.random() - 0.5) * 2; this.dy = (Math.random() - 0.5) * 2; this.img = new Image(); this.img.src = imgSrc; } draw() { this.ctx.save(); this.ctx.globalAlpha = 0.1; this.ctx.beginPath(); this.ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2); this.ctx.clip(); this.ctx.drawImage(this.img, this.x, this.y, this.size, this.size); this.ctx.restore(); } update() { if (this.x + this.size > this.canvas.width || this.x < 0) this.dx *= -1; if (this.y + this.size > this.canvas.height || this.y < 0) this.dy *= -1; this.x += this.dx; this.y += this.dy; } } function initBackground(avatarUrl) { const canvas = document.getElementById('animated-background'); const ctx = canvas.getContext('2d'); function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } resizeCanvas(); window.addEventListener('resize', resizeCanvas); const images = Array(200).fill(null).map(() => new FloatingImage( canvas, avatarUrl, Math.random() * canvas.width, Math.random() * canvas.height )); function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); images.forEach(img => { img.update(); img.draw(); }); requestAnimationFrame(animate); } animate(); } document.getElementById('username').addEventListener('keydown', async (e) => { if (e.key === 'Enter') { e.preventDefault(); // Hide hint when entering new username document.querySelector('.username-hint').classList.add('hidden'); // Get new username, remove @ if present and trim whitespace let searchUsername = e.target.textContent.trim().replace('@', ''); // Update iframe source based on username const iframe = document.querySelector('iframe'); if (iframe) { iframe.src = searchUsername === 'abandonedmuse' ? 'https://websim.ai/@abandonedmuse/my-projects' : `https://websim.ai/@${searchUsername}`; } // Reset data structures projectsData = []; projectsAfterCursor = null; followersAfterCursor = null; followingAfterCursor = null; // Clear existing grids document.getElementById('projects-grid').innerHTML = ''; document.getElementById('followers-grid').innerHTML = ''; document.getElementById('following-grid').innerHTML = ''; document.getElementById('friends-grid').innerHTML = ''; resetStatsToLoading(); // Show loading spinners // Update username and reload data username = searchUsername; await initProfile(); // Remove focus from the element e.target.blur(); } }); document.querySelector('.username-hint').classList.remove('hidden'); </script> <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body></html>
+<html>
+  <head>
+    <base href="abandonedmuse" />
+    <title>abandonedmuse</title>
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .loading-spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-top: 3px solid #2196f3;
+        border-right: 3px solid #2196f3;
+        border-radius: 50%;
+        animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        box-shadow: 0 0 10px rgba(33,150,243,0.2);
+      }
+      .loading-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 2rem 0;
+        opacity: 0.8;
+      }
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+      .loading-container {
+        animation: pulse 2s ease-in-out infinite;
+      }
+      .value.joined {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .value.joined .ago {
+        font-size: 0.9rem;
+        color: #aaa;
+        margin-top: -0.5rem;
+      }
+      #animated-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+      }
+      .container {
+        position: relative;
+        z-index: 1;
+      }
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #ffffff;
+        background: #121212;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .profile-header {
+        background: #1e1e1e;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2rem;
+      }
+      .avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: #2a2a2a;
+      }
+      .profile-info h1 {
+        font-size: 2.5rem;
+      }
+      .profile-info h1 span {
+        outline: none;
+        border-bottom: 1px dashed #555;
+        padding: 0 4px;
+      }
+      .username-hint {
+        font-size: 0.8rem;
+        color: #666;
+        margin-left: 1rem;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+        user-select: none;
+        cursor: default;
+      }
+      .username-hint.hidden {
+        opacity: 0;
+      }
+      #username[contenteditable=true]:hover {
+        background: rgba(33, 150, 243, 0.1);
+        border-radius: 4px;
+        cursor: text;
+      }
+      #username[contenteditable=true]:focus {
+        background: rgba(33, 150, 243, 0.2);
+        border-radius: 4px;
+      }
+      .social-links {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+        margin-top: -1rem;
+      }
+      .stat-card {
+        background: #1e1e1e;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        text-align: center;
+      }
+      .stat-card h3 {
+        color: #aaa;
+        font-size: 1.3rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .stat-card .value {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #ffffff;
+        text-align: center;
+      }
+      .view-button {
+        background: #2a2a2a;
+        border: none;
+        color: #aaa;
+        padding: 0.8rem 1.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 1.1rem;
+      }
+      .view-button:hover {
+        background: #333;
+        color: #fff;
+      }
+      .view-button.active {
+        background: #2196f3;
+        color: #fff;
+      }
+      .view-content {
+        margin-top: 1.5rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+      .card {
+        background: #2a2a2a;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+        text-decoration: none;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+      }
+      .card-content {
+        padding: 1rem;
+      }
+      .card h3 {
+        margin-bottom: 0.5rem;
+      }
+      .card-meta {
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+      .loading-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 2rem 0;
+      }
+      .recent-follower-card {
+        background: #1e1e1e;
+        padding: 1.5rem;
+        min-height: 100%;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      .recent-follower-card h3 {
+        color: #aaa;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .recent-follower-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      .recent-follower-name {
+        font-size: 1.1rem;
+        color: #ffffff;
+        text-align: center;
+      }
+      .load-more {
+        display: none;
+        margin: 2rem auto;
+        padding: 1rem 2rem;
+        background: #2196f3;
+        border: none;
+        border-radius: 0.5rem;
+        color: white;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: background 0.2s;
+      }
+      .load-more:hover {
+        background: #1976d2;
+      }
+      .preview-image {
+        width: 100%;
+        height: 200px;
+        background: #2a2a2a;
+        object-fit: cover;
+        transition: opacity 0.2s;
+      }
+      .card:hover .preview-image {
+        opacity: 0.9;
+      }
+      .card-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+      .user-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 1rem;
+      }
+      .user-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.2s ease;
+      }
+      .user-card:hover {
+        transform: scale(1.05);
+      }
+      .user-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 0.5rem;
+        background: #eee;
+      }
+      .user-name {
+        font-size: 0.9rem;
+        color: #ffffff;
+        word-break: break-word;
+      }
+      .sort-controls {
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      .sort-button {
+        background: #2a2a2a;
+        border: none;
+        color: #aaa;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .sort-button:hover {
+        background: #333;
+        color: #fff;
+      }
+      .sort-button.active {
+        background: #2196f3;
+        color: #fff;
+      }
+      .search-box {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: none;
+        z-index: 100;
+      }
+      .search-input {
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid #2196f3;
+        background: #2a2a2a;
+        color: white;
+        font-size: 16px;
+        width: 200px;
+      }
+      .search-input::placeholder {
+        color: #aaa;
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        z-index: 1000;
+      }
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.7);
+        background: #1e1e1e;
+        border-radius: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        z-index: 1001;
+        width: 80vw;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .modal.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      .modal-close {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: transform 0.2s;
+      }
+      .modal-close:hover {
+        transform: scale(1.1);
+      }
+      .modal iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 1rem;
+        flex: 1;
+        margin-bottom: 10px;
+      }
+      .open-new-tab {
+        text-align: center;
+        padding: 10px;
+        text-decoration: none;
+        color: #2196f3;
+        font-size: 1rem;
+        transition: color 0.2s;
+      }
+      .open-new-tab:hover {
+        color: #1976d2;
+      }
+      #recent-follower {
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+      #recent-follower:hover {
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="animated-background"></canvas>
+    <div class="container" id="app">
+      <div class="search-box">
+        <input type="text" class="search-input" placeholder="Enter username..." id="user-search">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr auto; gap: 2rem; margin-bottom: 2rem;">
+        <div class="profile-header">
+          <img class="avatar" id="avatar" alt="Profile avatar">
+          <div class="profile-info">
+            <h1>
+              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed #555; padding: 0 4px;"></span>
+              <span class="username-hint">← You can edit the name!</span>
+            </h1>
+            <p id="description"></p>
+            <div class="social-links"></div>
+          </div>
+        </div>
+        <div class="stat-card recent-follower-card" style="margin: 0; height: fit-content;">
+          <h3>🥰 Latest Follower</h3>
+          <div id="recent-follower">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat-card">
+          <h3>🌐 Projects</h3>
+          <div class="value" id="sites-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>👁️ Views</h3>
+          <div class="value" id="views-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>❤️ Likes</h3>
+          <div class="value" id="likes-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>🥰 Followers</h3>
+          <div class="value" id="followers-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>😍 Following</h3>
+          <div class="value" id="following-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>🎉 Popularity</h3>
+          <div class="value" id="popularity-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>⭐ Quality</h3>
+          <div class="value" id="rating-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>📅 Joined</h3>
+          <div class="value" id="joined-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>👥 Friends</h3>
+          <div class="value" id="friends-count"><div class="loading-spinner"></div></div>
+        </div>
+        <div class="stat-card">
+          <h3>🤫 Unposted</h3>
+          <div class="value" id="unposted-count"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <iframe src="https://websim.ai/@abandonedmuse/my-projects" style="width: 100%; height: 600px; border: none; border-radius: 1rem; margin: 2rem 0; background: #1e1e1e;" title="My Projects"></iframe>
+      <div class="content-section">
+        <div class="sort-controls">
+          <button class="view-button active" data-view="projects">Projects</button>
+          <button class="view-button" data-view="followers">Followers</button>
+          <button class="view-button" data-view="following">Following</button>
+          <button class="view-button" data-view="friends">Friends</button>
+        </div>
+        <div id="projects-view" class="view-content">
+          <div class="sort-controls">
+            <button class="sort-button active" data-sort="recent">Recent</button>
+            <button class="sort-button" data-sort="views">Most Viewed</button>
+            <button class="sort-button" data-sort="likes">Most Liked</button>
+          </div>
+          <div class="grid" id="projects-grid"></div>
+          <div class="loading-container" id="projects-loading">
+            <div class="loading-spinner"></div>
+          </div>
+          <button id="load-more-projects" class="load-more">Load More</button>
+        </div>
+        <div id="followers-view" class="view-content" style="display:none">
+          <div class="user-grid" id="followers-grid"></div>
+          <div class="loading-container" id="followers-loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+        <div id="following-view" class="view-content" style="display:none">
+          <div class="user-grid" id="following-grid"></div>
+          <div class="loading-container" id="following-loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+        <div id="friends-view" class="view-content" style="display:none">
+          <div class="user-grid" id="friends-grid"></div>
+          <div class="loading-container" id="friends-loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay">
+      <div class="modal">
+        <button class="modal-close">×</button>
+        <iframe></iframe>
+        <a class="open-new-tab" target="_blank">↗️ Open in new tab</a>
+      </div>
+    </div>
+    
+    <script>
+      const room = new WebsimSocket();
+      
+      async function storeUserStats(stats) {
+        await room.store.update({
+          id: 'user_stats',
+          dependencies: { stats },
+          updateFunction: (records) => {
+            if (!records) records = {};
+            // Remove old record for this user if exists
+            const newRecords = { ...records };
+            if (newRecords[stats.username]) {
+              delete newRecords[stats.username];
+            }
+            // Add new record
+            newRecords[stats.username] = { ...stats, timestamp: new Date().toISOString() };
+            return newRecords;
+          }
+        });
+      }
+      
+      async function calculatePercentile(value, statName) {
+        const records = await room.store.get('user_stats');
+        if (!records) return null;
+        const values = Object.values(records).map(r => r[statName]);
+        values.sort((a, b) => b - a);
+        const position = values.findIndex(v => v <= value) + 1;
+        const percentile = Math.round((1 - (position / values.length)) * 100);
+        return 100 - percentile;
+      }
+      
+      async function updateStatWithPercentile(elementId, value, statName) {
+        const element = document.getElementById(elementId);
+        if (isNaN(value) || value === undefined || value === null || value === 0) {
+          element.innerHTML = '<div class="loading-spinner"></div>';
+          return;
+        }
+        const percentile = await calculatePercentile(value, statName);
+        let add = "";
+        if (statName === 'popularity') {
+          add = "/10";
+        }
+        if (statName === 'rating') {
+          add = "/5";
+        }
+        if (percentile === null || isNaN(percentile)) {
+          element.innerHTML = `${value}`;
+        } else {
+          element.innerHTML = ` ${value}${add} <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;"> Top ${percentile}% </div> `;
+        }
+      }
+      
+      let username = 'abandonedmuse';
+      let projectsAfterCursor = null;
+      let followersAfterCursor = null;
+      let followingAfterCursor = null;
+      let friendsAfterCursor = null;
+      let currentSort = 'recent';
+      let projectsData = [];
+      
+      function getRelativeTimeString(date) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        const diffMonths = Math.floor(diffDays / 30);
+        const diffYears = Math.floor(diffDays / 365);
+        if (diffYears > 0) { return `${diffYears}y`; }
+        else if (diffMonths > 0) { return `${diffMonths}mo`; }
+        else if (diffDays > 0) { return `${diffDays}d`; }
+        else if (diffHours > 0) { return `${diffHours}h`; }
+        else if (diffMins > 0) { return `${diffMins}m`; }
+        else { return `${diffSecs}s`; }
+      }
+      
+      async function fetchUserProfile() {
+        const response = await fetch(`/api/v1/users/${username}`);
+        const data = await response.json();
+        return data.user;
+      }
+      
+      async function fetchFollowingCount() {
+        const response = await fetch(`/api/v1/users/${username}/following?count=true`);
+        const data = await response.json();
+        return data.following.meta.count;
+      }
+      
+      async function fetchFollowersCount() {
+        const response = await fetch(`/api/v1/users/${username}/followers?count=true`);
+        const data = await response.json();
+        return data.followers.meta.count;
+      }
+      
+      async function fetchProjects(afterCursor = null) {
+        const params = new URLSearchParams();
+        if (afterCursor) params.append('after', afterCursor);
+        params.append('first', '100');
+        params.append('posted', 'true');
+        params.append('sort_by', 'updated_at');
+        const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+        const data = await response.json();
+        return {
+          data: data.projects.data.map(item => ({
+            project: item.project,
+            project_revision: item.project_revision,
+            site: item.site,
+            cursor: item.cursor
+          })),
+          meta: data.projects.meta
+        };
+      }
+      
+      async function fetchFollowers(afterCursor = null) {
+        const params = new URLSearchParams();
+        if (afterCursor) params.append('after', afterCursor);
+        params.append('first', '100');
+        const response = await fetch(`/api/v1/users/${username}/followers?${params}`);
+        const data = await response.json();
+        return data.followers;
+      }
+      
+      async function fetchFollowing(afterCursor = null) {
+        const params = new URLSearchParams();
+        if (afterCursor) params.append('after', afterCursor);
+        params.append('first', '100');
+        const response = await fetch(`/api/v1/users/${username}/following?${params}`);
+        const data = await response.json();
+        return data.following;
+      }
+      
+      async function fetchRecentFollower() {
+        const response = await fetch(`/api/v1/users/${username}/followers?first=1`);
+        const data = await response.json();
+        if (data.followers.data.length > 0) {
+          const follower = data.followers.data[0].follow.user;
+          const recentFollowerEl = document.getElementById('recent-follower');
+          recentFollowerEl.innerHTML = `
+            <img class="recent-follower-avatar" src="${follower.avatar_url || ''}" alt="Recent follower avatar">
+            <div class="recent-follower-name">${follower.username}</div>
+          `;
+          recentFollowerEl.style.cursor = 'pointer';
+        }
+      }
+      
+      async function fetchUnpostedProjects() {
+        const params = new URLSearchParams();
+        params.append('first', '100');
+        params.append('posted', 'false');
+        const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+        const data = await response.json();
+        let totalCount = data.projects.data.length;
+        let hasNextPage = data.projects.meta.has_next_page;
+        let nextCursor = data.projects.meta.end_cursor;
+        while (hasNextPage) {
+          params.set('after', nextCursor);
+          const nextResponse = await fetch(`/api/v1/users/${username}/projects?${params}`);
+          const nextData = await nextResponse.json();
+          totalCount += nextData.projects.data.length;
+          hasNextPage = nextData.projects.meta.has_next_page;
+          nextCursor = nextData.projects.meta.end_cursor;
+        }
+        return totalCount;
+      }
+      
+      async function loadMoreProjects() {
+        try {
+          const data = await fetchProjects(projectsAfterCursor);
+          const loadingEl = document.getElementById('projects-loading');
+          const loadMoreBtn = document.getElementById('load-more-projects');
+          loadingEl.style.display = 'block';
+          loadMoreBtn.style.display = 'none';
+          projectsData = projectsData.concat(data.data);
+          if (data.meta.has_next_page) {
+            projectsAfterCursor = data.meta.end_cursor;
+            await loadMoreProjects();
+          } else {
+            document.getElementById('sites-count').innerHTML = '<div class="loading-spinner"></div>';
+            document.getElementById('views-count').innerHTML = '<div class="loading-spinner"></div>';
+            document.getElementById('likes-count').innerHTML = '<div class="loading-spinner"></div>';
+            document.getElementById('popularity-count').innerHTML = '<div class="loading-spinner"></div>';
+            document.getElementById('rating-count').innerHTML = '<div class="loading-spinner"></div>';
+            const stats = projectsData.reduce((acc, { project }) => ({
+              views: acc.views + project.stats.views,
+              likes: acc.likes + project.stats.likes,
+              sites: acc.sites + 1
+            }), { views: 0, likes: 0, sites: 0 });
+      
+            let popularityScore = 0;
+            if (stats.views >= 20000 && stats.likes >= 325) {
+              popularityScore = 10;
+            } else if (stats.views >= 10000 && stats.likes >= 250) {
+              popularityScore = 9;
+            } else if (stats.views >= 5000 && stats.likes >= 120) {
+              popularityScore = 8;
+            } else if (stats.views >= 2500 && stats.likes >= 75) {
+              popularityScore = 7;
+            } else if (stats.views >= 1000 && stats.likes >= 40) {
+              popularityScore = 6;
+            } else if (stats.views >= 500 && stats.likes >= 20) {
+              popularityScore = 5;
+            } else if (stats.views >= 250 && stats.likes >= 10) {
+              popularityScore = 4;
+            } else if (stats.views >= 100 && stats.likes >= 5) {
+              popularityScore = 3;
+            } else if (stats.likes >= 10) {
+              popularityScore = 2;
+            } else if (stats.views >= 10) {
+              popularityScore = 1;
+            }
+      
+            let rating = 0;
+            if (stats.views > 0) {
+              const viewsPerLike = stats.views / stats.likes;
+              if (viewsPerLike >= 100) { rating = 1; }
+              else if (viewsPerLike >= 75) { rating = 2; }
+              else if (viewsPerLike >= 65) { rating = 3; }
+              else if (viewsPerLike >= 50) { rating = 4; }
+              else { rating = 5; }
+              if (stats.likes === 0) { rating = 0; }
+            }
+      
+            const userStats = {
+              username: username,
+              projects: stats.sites,
+              views: stats.views,
+              likes: stats.likes,
+              followers: parseInt(document.getElementById('followers-count').textContent) || 0,
+              following: parseInt(document.getElementById('following-count').textContent) || 0,
+              friends: parseInt(document.getElementById('friends-count').textContent) || 0,
+              popularity: popularityScore,
+              rating: rating,
+              unposted: parseInt(document.getElementById('unposted-count').textContent) || 0
+            };
+      
+            await storeUserStats(userStats);
+      
+            await updateStatWithPercentile('sites-count', userStats.projects, 'projects');
+            await updateStatWithPercentile('views-count', userStats.views, 'views');
+            await updateStatWithPercentile('likes-count', userStats.likes, 'likes');
+            await updateStatWithPercentile('followers-count', userStats.followers, 'followers');
+            await updateStatWithPercentile('following-count', userStats.following, 'following');
+            await updateStatWithPercentile('friends-count', userStats.friends, 'friends');
+            await updateStatWithPercentile('popularity-count', userStats.popularity, 'popularity');
+            await updateStatWithPercentile('rating-count', userStats.rating, 'rating');
+            await updateStatWithPercentile('unposted-count', userStats.unposted, 'unposted');
+      
+            sortProjects();
+            loadingEl.style.display = 'none';
+          }
+        } catch (error) {
+          console.error('Error loading more projects:', error);
+          document.getElementById('projects-loading').style.display = 'none';
+        }
+      }
+      
+      function resetStatsToLoading() {
+        const spinnerHtml = '<div class="loading-spinner"></div>';
+        document.getElementById('views-count').innerHTML = spinnerHtml;
+        document.getElementById('sites-count').innerHTML = spinnerHtml;
+        document.getElementById('likes-count').innerHTML = spinnerHtml;
+        document.getElementById('followers-count').innerHTML = spinnerHtml;
+        document.getElementById('following-count').innerHTML = spinnerHtml;
+        document.getElementById('friends-count').innerHTML = spinnerHtml;
+        document.getElementById('popularity-count').innerHTML = spinnerHtml;
+        document.getElementById('rating-count').innerHTML = spinnerHtml;
+        document.getElementById('unposted-count').innerHTML = spinnerHtml;
+        document.getElementById('joined-count').innerHTML = spinnerHtml;
+        document.getElementById('description').innerHTML = spinnerHtml;
+      }
+      
+      async function loadMoreFollowers() {
+        const followersData = await fetchFollowers(followersAfterCursor);
+        const loadingEl = document.getElementById('followers-loading');
+        loadingEl.style.display = 'block';
+        const followersGrid = document.getElementById('followers-grid');
+        followersData.data.forEach(({ follow }) => {
+          followersGrid.appendChild(createUserCard(follow.user));
+        });
+        followersAfterCursor = followersData.meta.end_cursor;
+        if (followersData.meta.has_next_page) {
+          loadMoreFollowers();
+        } else {
+          loadingEl.style.display = 'none';
+        }
+      }
+      
+      async function loadMoreFollowing() {
+        const followingData = await fetchFollowing(followingAfterCursor);
+        const loadingEl = document.getElementById('following-loading');
+        loadingEl.style.display = 'block';
+        const followingGrid = document.getElementById('following-grid');
+        followingData.data.forEach(({ follow }) => {
+          followingGrid.appendChild(createUserCard(follow.user));
+        });
+        followingAfterCursor = followingData.meta.end_cursor;
+        if (followingData.meta.has_next_page) {
+          loadMoreFollowing();
+        } else {
+          loadingEl.style.display = 'none';
+        }
+      }
+      
+      async function getFriends() {
+        const following = await fetchFollowing();
+        const followers = await fetchFollowers();
+        const followingUsers = new Set(following.data.map(f => f.follow.user.username));
+        const followerUsers = new Set(followers.data.map(f => f.follow.user.username));
+        const friends = following.data.filter(f => followerUsers.has(f.follow.user.username)).map(f => f.follow.user);
+        document.getElementById('friends-count').textContent = friends.length;
+        const friendsGrid = document.getElementById('friends-grid');
+        friendsGrid.innerHTML = '';
+        friends.forEach(friend => {
+          friendsGrid.appendChild(createUserCard(friend));
+        });
+        document.getElementById('friends-loading').style.display = 'none';
+      }
+      
+      // Moved sortProjects to global scope so it can be used anywhere
+      function sortProjects() {
+        const projectsGrid = document.getElementById('projects-grid');
+        projectsGrid.innerHTML = '';
+        let sortedProjects = [...projectsData];
+        switch (currentSort) {
+          case 'views':
+            sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views);
+            break;
+          case 'likes':
+            sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes);
+            break;
+          case 'recent':
+          default:
+            sortedProjects.sort((a, b) => new Date(b.project.updated_at) - new Date(a.project.updated_at));
+            break;
+        }
+        sortedProjects.forEach(({ project, project_revision, site }) => {
+          const card = createProjectCard(project, project_revision, site);
+          projectsGrid.appendChild(card);
+        });
+      }
+      
+      async function initProfile() {
+        try {
+          document.querySelector('.username-hint').classList.add('hidden');
+          resetStatsToLoading();
+          const user = await fetchUserProfile();
+          document.getElementById('username').textContent = `${user.username}`;
+          document.getElementById('avatar').src = user.avatar_url || '';
+          initBackground(user.avatar_url || '');
+          const joinedEl = document.getElementById('joined-count');
+          joinedEl.className = 'value joined';
+          const joinedDate = new Date(user.created_at);
+          joinedEl.innerHTML = `
+            <div>${getRelativeTimeString(joinedDate)}</div>
+            <div class="ago">ago</div>
+          `;
+          const [followingCount, followersCount] = await Promise.all([
+            fetchFollowingCount(),
+            fetchFollowersCount()
+          ]);
+          await fetchRecentFollower();
+          await updateStatWithPercentile('following-count', followingCount, 'following');
+          await updateStatWithPercentile('followers-count', followersCount, 'followers');
+          await loadMoreProjects();
+          await loadMoreFollowers();
+          await loadMoreFollowing();
+          await getFriends();
+          const unpostedCount = await fetchUnpostedProjects();
+          document.getElementById('unposted-count').textContent = unpostedCount;
+          document.querySelectorAll('.sort-button').forEach(button => {
+            button.addEventListener('click', () => {
+              document.querySelectorAll('.sort-button').forEach(b => b.classList.remove('active'));
+              button.classList.add('active');
+              currentSort = button.dataset.sort;
+              sortProjects();
+            });
+          });
+          document.querySelectorAll('.view-button').forEach(button => {
+            button.addEventListener('click', async () => {
+              document.querySelectorAll('.view-button').forEach(b => b.classList.remove('active'));
+              button.classList.add('active');
+              document.querySelectorAll('.view-content').forEach(view => {
+                view.style.display = 'none';
+              });
+              const viewType = button.dataset.view;
+              const viewElement = document.getElementById(`${viewType}-view`);
+              viewElement.style.display = 'block';
+              if (viewType === 'followers' && !followersAfterCursor) {
+                await loadMoreFollowers();
+              } else if (viewType === 'following' && !followingAfterCursor) {
+                await loadMoreFollowing();
+              } else if (viewType === 'friends') {
+                await getFriends();
+              }
+            });
+          });
+          const bioText = generateBioText(user, projectsData, document.getElementById('following-count').textContent, document.getElementById('followers-count').textContent);
+          document.getElementById('description').innerHTML = bioText;
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        }
+      }
+      
+      let rPressCount = 0;
+      let rPressTimer = null;
+      document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r') {
+          rPressCount++;
+          clearTimeout(rPressTimer);
+          rPressTimer = setTimeout(() => { rPressCount = 0; }, 1000);
+          if (rPressCount === 3) {
+            document.querySelector('.search-box').style.display = 'block';
+            rPressCount = 0;
+          }
+        }
+      });
+      
+      document.getElementById('user-search').addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+          document.querySelector('.username-hint').classList.add('hidden');
+          resetStatsToLoading();
+          let searchUsername = e.target.value.trim().replace('@', '');
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.src = searchUsername === 'abandonedmuse' ? 'https://websim.ai/@abandonedmuse/my-projects' : `https://websim.ai/@${searchUsername}`;
+          }
+          projectsData = [];
+          projectsAfterCursor = null;
+          followersAfterCursor = null;
+          followingAfterCursor = null;
+          document.getElementById('projects-grid').innerHTML = '';
+          document.getElementById('followers-grid').innerHTML = '';
+          document.getElementById('following-grid').innerHTML = '';
+          document.getElementById('friends-grid').innerHTML = '';
+          username = searchUsername;
+          await initProfile();
+          document.querySelector('.search-box').style.display = 'none';
+          e.target.value = '';
+        }
+      });
+      
+      document.getElementById('recent-follower').addEventListener('click', function() {
+        if (this.querySelector('.recent-follower-name')) {
+          const username = this.querySelector('.recent-follower-name').textContent;
+          document.getElementById('username').textContent = username;
+          projectsData = [];
+          projectsAfterCursor = null;
+          followersAfterCursor = null;
+          followingAfterCursor = null;
+          document.getElementById('projects-grid').innerHTML = '';
+          document.getElementById('followers-grid').innerHTML = '';
+          document.getElementById('following-grid').innerHTML = '';
+          document.getElementById('friends-grid').innerHTML = '';
+          resetStatsToLoading();
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.src = `https://websim.ai/@${username}`;
+          }
+          username = this.querySelector('.recent-follower-name').textContent;
+          initProfile();
+        }
+      });
+      
+      initProfile();
+      
+      function createUserCard(user) {
+        const card = document.createElement('a');
+        card.href = `https://websim.ai/@${user.username}`;
+        card.className = 'user-card';
+        card.innerHTML = `
+          <img class="user-avatar" src="${user.avatar_url || ''}" alt="${user.username}'s avatar">
+          <div class="user-name">${user.username}</div>
+        `;
+        card.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const usernameEl = document.getElementById('username');
+          usernameEl.textContent = user.username;
+          document.querySelector('.username-hint').classList.add('hidden');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.src = `https://websim.ai/@${user.username}`;
+          }
+          projectsData = [];
+          projectsAfterCursor = null;
+          followersAfterCursor = null;
+          followingAfterCursor = null;
+          document.getElementById('projects-grid').innerHTML = '';
+          document.getElementById('followers-grid').innerHTML = '';
+          document.getElementById('following-grid').innerHTML = '';
+          document.getElementById('friends-grid').innerHTML = '';
+          resetStatsToLoading();
+          username = user.username;
+          await initProfile();
+        });
+        return card;
+      }
+      
+      function createProjectCard(project, project_revision, site) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const previewHtml = site
+          ? `<img class="preview-image" src="https://images.websim.ai/v1/site/${site.id}/600" alt="Preview of ${project.title || 'Untitled Project'}" loading="lazy">`
+          : `<div class="preview-image"></div>`;
+        card.innerHTML = `
+          <div class="project-link" style="text-decoration: none; color: inherit; cursor: pointer;">
+            ${previewHtml}
+            <div class="card-content">
+              <h3>${project.title || 'Untitled Project'}</h3>
+              <div class="card-stats">
+                <span>👁️ ${project.stats.views}</span>
+                <span>❤️ ${project.stats.likes}</span>
+              </div>
+              <div class="card-meta">
+                ${getRelativeTimeString(new Date(project.created_at))} ago
+              </div>
+            </div>
+          </div>
+        `;
+        const projectLink = card.querySelector('.project-link');
+        projectLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          const modal = document.querySelector('.modal');
+          const overlay = document.querySelector('.modal-overlay');
+          const iframe = modal.querySelector('iframe');
+          const projectUrl = `https://websim.ai/p/${project.id}`;
+          iframe.src = projectUrl;
+          let openNewTab = modal.querySelector('.open-new-tab');
+          if (!openNewTab) {
+            openNewTab = document.createElement('a');
+            openNewTab.className = 'open-new-tab';
+            openNewTab.target = '_blank';
+            openNewTab.textContent = '↗️ Open in new tab';
+            modal.appendChild(openNewTab);
+          }
+          openNewTab.href = projectUrl;
+          overlay.classList.add('active');
+          modal.classList.add('active');
+        });
+        return card;
+      }
+      
+      document.querySelector('.modal-close').addEventListener('click', () => {
+        const modal = document.querySelector('.modal');
+        const overlay = document.querySelector('.modal-overlay');
+        modal.classList.remove('active');
+        overlay.classList.remove('active');
+        setTimeout(() => {
+          modal.querySelector('iframe').src = '';
+          const openNewTab = modal.querySelector('.open-new-tab');
+          if (openNewTab) { openNewTab.remove(); }
+        }, 300);
+      });
+      
+      document.querySelector('.modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+          document.querySelector('.modal-close').click();
+        }
+      });
+      
+      function generateBioText(user, projectsData, followingCount, followersCount) {
+        if (!projectsData.length) return '';
+        const cleanNumber = (numStr) => {
+          if (!numStr) return '0';
+          return numStr.split('\n')[0].trim();
+        };
+        let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
+        const totalViews = projectsData.reduce((acc, { project }) => acc + project.stats.views, 0);
+        const projectsCount = projectsData.length;
+        bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
+        if (totalViews > 0) {
+          bioText += ` with ${totalViews} total views`;
+        }
+        bioText += '. ';
+        const latestProject = [...projectsData].sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at))[0].project;
+        const mostViewedProject = [...projectsData].sort((a, b) => b.project.stats.views - a.project.stats.views)[0].project;
+        const mostLikedProject = [...projectsData].sort((a, b) => b.project.stats.likes - a.project.stats.likes)[0].project;
+        bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: #2196f3;">${latestProject.title || 'Untitled'}</a>`;
+        const projectDate = new Date(latestProject.created_at).toLocaleDateString();
+        if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
+          bioText += ` which I made on ${projectDate}`;
+        }
+        bioText += '. ';
+        if (mostViewedProject.stats.views > 0) {
+          bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: #2196f3;">${mostViewedProject.title || 'Untitled'}</a> with ${mostViewedProject.stats.views} views. `;
+        }
+        if (mostLikedProject.stats.likes > 0) {
+          bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: #2196f3;">${mostLikedProject.title || 'Untitled'}</a> with ${mostLikedProject.stats.likes} likes. `;
+        }
+        let socialText = [];
+        const cleanFollowingCount = cleanNumber(followingCount);
+        const cleanFollowersCount = cleanNumber(followersCount);
+        if (parseInt(cleanFollowingCount) > 0) {
+          socialText.push(`I'm following ${cleanFollowingCount} people`);
+        }
+        if (parseInt(cleanFollowersCount) > 0) {
+          socialText.push(`${cleanFollowersCount} ${parseInt(cleanFollowersCount) === 1 ? 'person who follows' : 'people who follow'} me`);
+        }
+        if (socialText.length > 0) {
+          bioText += socialText.join(' and ');
+        }
+        return bioText;
+      }
+      
+      class FloatingImage {
+        constructor(canvas, imgSrc, x, y) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.x = x;
+          this.y = y;
+          this.size = 60;
+          this.dx = (Math.random() - 0.5) * 2;
+          this.dy = (Math.random() - 0.5) * 2;
+          this.img = new Image();
+          this.img.src = imgSrc;
+        }
+        draw() {
+          this.ctx.save();
+          this.ctx.globalAlpha = 0.1;
+          this.ctx.beginPath();
+          this.ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+          this.ctx.clip();
+          this.ctx.drawImage(this.img, this.x, this.y, this.size, this.size);
+          this.ctx.restore();
+        }
+        update() {
+          if (this.x + this.size > this.canvas.width || this.x < 0) this.dx *= -1;
+          if (this.y + this.size > this.canvas.height || this.y < 0) this.dy *= -1;
+          this.x += this.dx;
+          this.y += this.dy;
+        }
+      }
+      
+      function initBackground(avatarUrl) {
+        const canvas = document.getElementById('animated-background');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        const images = Array(200).fill(null).map(() =>
+          new FloatingImage(canvas, avatarUrl, Math.random() * canvas.width, Math.random() * canvas.height)
+        );
+        function animate() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          images.forEach(img => {
+            img.update();
+            img.draw();
+          });
+          requestAnimationFrame(animate);
+        }
+        animate();
+      }
+      
+      document.getElementById('username').addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.querySelector('.username-hint').classList.add('hidden');
+          let searchUsername = e.target.textContent.trim().replace('@', '');
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.src = searchUsername === 'abandonedmuse'
+              ? 'https://websim.ai/@abandonedmuse/my-projects'
+              : `https://websim.ai/@${searchUsername}`;
+          }
+          projectsData = [];
+          projectsAfterCursor = null;
+          followersAfterCursor = null;
+          followingAfterCursor = null;
+          document.getElementById('projects-grid').innerHTML = '';
+          document.getElementById('followers-grid').innerHTML = '';
+          document.getElementById('following-grid').innerHTML = '';
+          document.getElementById('friends-grid').innerHTML = '';
+          resetStatsToLoading();
+          username = searchUsername;
+          await initProfile();
+          e.target.blur();
+        }
+      });
+      
+      document.querySelector('.username-hint').classList.remove('hidden');
+    </script>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
