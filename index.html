@@ -560,7 +560,7 @@
       /* @tweakable Opacity of floating image particles (0.0-1.0) */
       const particleOpacity = 0.1;
       
-      /* @tweakable Size of user avatar in follower/following lists */
+      /* @tweakable Size of user avatar in follower/following lists in pixels */
       const userAvatarSize = 80;
       
       /* @tweakable Height of the project preview image in pixels */
@@ -571,6 +571,18 @@
       
       /* @tweakable Maximum followers/following to load per batch */
       const userBatchSize = 50;
+
+      /* @tweakable Format large numbers with commas (true) or use compact notation (false) */
+      const useCommaFormatting = true;
+      
+      /* @tweakable Enable percentile calculations for stats (can slow down page for large datasets) */
+      const enablePercentiles = true;
+      
+      /* @tweakable Number of projects to load before calculating initial stats */
+      const initialStatsProjectCount = 10;
+      
+      /* @tweakable Enable automatically generated bio text */
+      const enableAutoBio = true;
       
       /* @tweakable Thresholds for Popularity Score (Views, Likes) */
       const popularityThresholds = [
@@ -592,7 +604,7 @@
         { score: 2, viewsPerLike: 75 },
         { score: 3, viewsPerLike: 65 },
         { score: 4, viewsPerLike: 50 },
-        { score: 5, viewsPerLike: 0 } // Max score if VPL < 50 or likes > 0
+        { score: 5, viewsPerLike: 40 }  // Max score if VPL <= 40 or likes > 0
       ];
       
       /* @tweakable Default username to load on page load */
@@ -610,27 +622,36 @@
       // ===== DATA HANDLING FUNCTIONS =====
       
       /**
+       * Format numbers according to settings
+       */
+      /* @tweakable Maximum number to display before using K/M notation (e.g., 5.2K) */
+      const numberFormatThreshold = 10000;
+      
+      function formatNumber(num) {
+        if (num === undefined || num === null) return '0';
+        
+        if (useCommaFormatting || num < numberFormatThreshold) {
+          return num.toLocaleString();
+        } else {
+          if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+          } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+          } else {
+            return num.toString();
+          }
+        }
+      }
+      
+      /**
        * Store user statistics in WebsimSocket persistent storage
        */
       async function storeUserStats(stats) {
         try {
-          await room.store.update({
-            id: 'user_stats',
-            dependencies: { stats },
-            updateFunction: (records) => {
-              if (!records) records = {};
-              // Remove old record for this user if exists
-              const newRecords = { ...records };
-              if (newRecords[stats.username]) {
-                delete newRecords[stats.username];
-              }
-              // Add new record
-              newRecords[stats.username] = { 
-                ...stats, 
-                timestamp: new Date().toISOString() 
-              };
-              return newRecords;
-            }
+          await room.collection('user_stats').create({
+            username: stats.username,
+            stats: stats,
+            timestamp: new Date().toISOString()
           });
         } catch (error) {
           console.error('Error storing user stats:', error);
@@ -641,13 +662,15 @@
        * Calculate percentile of a value compared to stored stats
        */
       async function calculatePercentile(value, statName) {
+        if (!enablePercentiles) return null;
+        
         try {
-          const records = await room.store.get('user_stats');
-          if (!records || Object.keys(records).length === 0) return null;
+          const records = room.collection('user_stats').getList();
+          if (!records || records.length === 0) return null;
           
-          const values = Object.values(records)
-            .filter(r => r[statName] !== undefined && r[statName] !== null)
-            .map(r => r[statName]);
+          const values = records
+            .filter(r => r.stats && r.stats[statName] !== undefined && r.stats[statName] !== null)
+            .map(r => r.stats[statName]);
           
           if (values.length === 0) return null;
           
@@ -667,8 +690,8 @@
         const element = document.getElementById(elementId);
         if (!element) return;
         
-        if (isNaN(value) || value === undefined || value === null || value === 0) {
-          element.innerHTML = '<div class="loading-spinner"></div>';
+        if (isNaN(value) || value === undefined || value === null) {
+          element.innerHTML = '0';
           return;
         }
         
@@ -683,10 +706,10 @@
           }
           
           if (percentile === null || isNaN(percentile)) {
-            element.innerHTML = `${value}${suffix}`;
+            element.innerHTML = `${formatNumber(value)}${suffix}`;
           } else {
             element.innerHTML = `
-              ${value}${suffix}
+              ${formatNumber(value)}${suffix}
               <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
                 Top ${percentile}%
               </div>
@@ -694,7 +717,7 @@
           }
         } catch (error) {
           console.error(`Error updating stat ${elementId}:`, error);
-          element.innerHTML = `${value || 'Error'}`;
+          element.innerHTML = `${formatNumber(value) || '0'}`;
         }
       }
       
@@ -756,7 +779,7 @@
             throw new Error(`Failed to fetch following count: ${response.status}`);
           }
           const data = await response.json();
-          return data.following.meta.count;
+          return data.following.meta.count || 0;
         } catch (error) {
           console.error('Error fetching following count:', error);
           return 0;
@@ -773,7 +796,7 @@
             throw new Error(`Failed to fetch followers count: ${response.status}`);
           }
           const data = await response.json();
-          return data.followers.meta.count;
+          return data.followers.meta.count || 0;
         } catch (error) {
           console.error('Error fetching followers count:', error);
           return 0;
@@ -813,48 +836,23 @@
       }
       
       /**
-       * Fetch a user's followers with pagination
+       * Fetch a user's stats 
        */
-      async function fetchFollowers(afterCursor = null) {
+      async function fetchUserStats() {
         try {
-          const params = new URLSearchParams();
-          if (afterCursor) params.append('after', afterCursor);
-          params.append('first', userBatchSize.toString());
-          
-          const response = await fetch(`/api/v1/users/${username}/followers?${params}`);
+          const response = await fetch(`/api/v1/users/${username}/stats`);
           if (!response.ok) {
-            throw new Error(`Failed to fetch followers: ${response.status}`);
+            throw new Error(`Failed to fetch user stats: ${response.status}`);
           }
-          
           const data = await response.json();
-          return data.followers;
+          return data.stats;
         } catch (error) {
-          console.error('Error fetching followers:', error);
-          return { data: [], meta: { has_next_page: false } };
+          console.error('Error fetching user stats:', error);
+          return { total_views: 0, total_likes: 0 };
         }
       }
       
-      /**
-       * Fetch users that the profile is following with pagination
-       */
-      async function fetchFollowing(afterCursor = null) {
-        try {
-          const params = new URLSearchParams();
-          if (afterCursor) params.append('after', afterCursor);
-          params.append('first', userBatchSize.toString());
-          
-          const response = await fetch(`/api/v1/users/${username}/following?${params}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch following: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          return data.following;
-        } catch (error) {
-          console.error('Error fetching following:', error);
-          return { data: [], meta: { has_next_page: false } };
-        }
-      }
+      // ...existing follower and following fetch functions...
       
       /**
        * Fetch the most recent follower
@@ -944,6 +942,46 @@
       // ===== UI DATA LOADING FUNCTIONS =====
       
       /**
+       * Update stats with direct API data
+       */
+      async function updateWithDirectStats() {
+        try {
+          // Fetch direct stats from API
+          const stats = await fetchUserStats();
+          
+          // Update views and likes directly from API
+          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
+          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
+          
+          // Calculate popularity and rating based on these direct values
+          let popularityScore = 0;
+          for (const threshold of popularityThresholds) {
+            if ((stats.total_views || 0) >= threshold.views && (stats.total_likes || 0) >= threshold.likes) {
+              popularityScore = threshold.score;
+              break;
+            }
+          }
+          
+          // Calculate quality rating
+          let rating = 0;
+          if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
+            const viewsPerLike = stats.total_views / stats.total_likes;
+            rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
+          } else if ((stats.total_likes || 0) > 0) {
+            rating = 5; // Max rating if likes but no views
+          }
+          
+          // Update the stats display
+          await updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
+          await updateStatWithPercentile('rating-count', rating, 'rating');
+          
+          return stats;
+        } catch (error) {
+          console.error('Error updating direct stats:', error);
+        }
+      }
+      
+      /**
        * Load and process all projects for a user
        */
       async function loadMoreProjects() {
@@ -960,79 +998,59 @@
           const data = await fetchProjects(projectsAfterCursor);
           projectsData = projectsData.concat(data.data);
           
+          // Update projects count immediately
+          document.getElementById('sites-count').innerHTML = formatNumber(projectsData.length);
+          
+          // Update stats from direct API once we have some projects
+          if (projectsData.length >= initialStatsProjectCount && !projectsAfterCursor) {
+            await updateWithDirectStats();
+          }
+          
           if (data.meta.has_next_page) {
             projectsAfterCursor = data.meta.end_cursor;
             isLoading = false;
-            await loadMoreProjects();
+            
+            // Update the UI with what we have so far
+            sortProjects();
+            
+            // Continue loading more projects
+            setTimeout(() => loadMoreProjects(), 100);
             return;
           }
           
-          // All projects loaded, update stats
-          document.getElementById('sites-count').innerHTML = '<div class="loading-spinner"></div>';
-          document.getElementById('views-count').innerHTML = '<div class="loading-spinner"></div>';
-          document.getElementById('likes-count').innerHTML = '<div class="loading-spinner"></div>';
-          document.getElementById('popularity-count').innerHTML = '<div class="loading-spinner"></div>';
-          document.getElementById('rating-count').innerHTML = '<div class="loading-spinner"></div>';
+          // All projects loaded, finalize stats
+          const totalProjects = projectsData.length;
+          document.getElementById('sites-count').innerHTML = formatNumber(totalProjects);
           
-          // Calculate stats from projects data
-          const stats = projectsData.reduce((acc, { project }) => ({
-            views: acc.views + project.stats.views,
-            likes: acc.likes + (project.stats.likes || 0),
-            sites: acc.sites + 1
-          }), { views: 0, likes: 0, sites: 0 });
+          // Update project grid
+          sortProjects();
+          projectLoadingEl.style.display = 'none';
           
-          // Calculate popularity score
-          let popularityScore = 0;
-          for (const threshold of popularityThresholds) {
-            if (stats.views >= threshold.views && stats.likes >= threshold.likes) {
-              popularityScore = threshold.score;
-              break;
-            }
-          }
-          
-          // Calculate quality rating
-          let rating = 0;
-          if (stats.likes > 0 && stats.views > 0) {
-            const viewsPerLike = stats.views / stats.likes;
-            rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
-          } else if (stats.likes > 0) {
-            rating = 5; // Max rating if likes but no views (unlikely but possible)
-          }
+          // Final stats update from API
+          const apiStats = await fetchUserStats();
           
           // Combine all user stats
           const userStats = {
             username: username,
-            projects: stats.sites,
-            views: stats.views,
-            likes: stats.likes,
-            followers: parseInt(document.getElementById('followers-count').textContent) || 0,
-            following: parseInt(document.getElementById('following-count').textContent) || 0,
-            friends: parseInt(document.getElementById('friends-count').textContent) || 0,
-            popularity: popularityScore,
-            rating: rating,
-            unposted: parseInt(document.getElementById('unposted-count').textContent) || 0
+            projects: totalProjects,
+            views: apiStats.total_views || 0,
+            likes: apiStats.total_likes || 0,
+            followers: parseInt(document.getElementById('followers-count').innerText.replace(/[^\d]/g, '')) || 0,
+            following: parseInt(document.getElementById('following-count').innerText.replace(/[^\d]/g, '')) || 0,
+            friends: parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0,
+            popularity: parseInt(document.getElementById('popularity-count').innerText) || 0,
+            rating: parseInt(document.getElementById('rating-count').innerText) || 0,
+            unposted: parseInt(document.getElementById('unposted-count').innerText.replace(/[^\d]/g, '')) || 0
           };
           
-          // Store stats and update UI
+          // Store stats
           await storeUserStats(userStats);
           
-          await updateStatWithPercentile('sites-count', userStats.projects, 'projects');
-          await updateStatWithPercentile('views-count', userStats.views, 'views');
-          await updateStatWithPercentile('likes-count', userStats.likes, 'likes');
-          await updateStatWithPercentile('followers-count', userStats.followers, 'followers');
-          await updateStatWithPercentile('following-count', userStats.following, 'following');
-          await updateStatWithPercentile('friends-count', userStats.friends, 'friends');
-          await updateStatWithPercentile('popularity-count', userStats.popularity, 'popularity');
-          await updateStatWithPercentile('rating-count', userStats.rating, 'rating');
-          await updateStatWithPercentile('unposted-count', userStats.unposted, 'unposted');
-          
-          // Update projects grid
-          sortProjects();
-          projectLoadingEl.style.display = 'none';
-          
-          // Generate bio text
-          const bioText = generateBioText(userStats);
-          document.getElementById('description').innerHTML = bioText;
+          // Generate bio text if enabled
+          if (enableAutoBio) {
+            const bioText = generateBioText(userStats);
+            document.getElementById('description').innerHTML = bioText;
+          }
           
           isLoading = false;
         } catch (error) {
@@ -1042,125 +1060,28 @@
           isLoading = false;
         }
       }
+
+      /* @tweakable Text to display when a value is loading */
+      const loadingText = '<div class="loading-spinner"></div>';
       
       /**
        * Reset all stat displays to loading state
        */
       function resetStatsToLoading() {
-        const spinnerHtml = '<div class="loading-spinner"></div>';
-        document.getElementById('views-count').innerHTML = spinnerHtml;
-        document.getElementById('sites-count').innerHTML = spinnerHtml;
-        document.getElementById('likes-count').innerHTML = spinnerHtml;
-        document.getElementById('followers-count').innerHTML = spinnerHtml;
-        document.getElementById('following-count').innerHTML = spinnerHtml;
-        document.getElementById('friends-count').innerHTML = spinnerHtml;
-        document.getElementById('popularity-count').innerHTML = spinnerHtml;
-        document.getElementById('rating-count').innerHTML = spinnerHtml;
-        document.getElementById('unposted-count').innerHTML = spinnerHtml;
-        document.getElementById('joined-count').innerHTML = spinnerHtml;
-        document.getElementById('description').innerHTML = spinnerHtml;
+        document.getElementById('views-count').innerHTML = loadingText;
+        document.getElementById('sites-count').innerHTML = loadingText;
+        document.getElementById('likes-count').innerHTML = loadingText;
+        document.getElementById('followers-count').innerHTML = loadingText;
+        document.getElementById('following-count').innerHTML = loadingText;
+        document.getElementById('friends-count').innerHTML = loadingText;
+        document.getElementById('popularity-count').innerHTML = loadingText;
+        document.getElementById('rating-count').innerHTML = loadingText;
+        document.getElementById('unposted-count').innerHTML = loadingText;
+        document.getElementById('joined-count').innerHTML = loadingText;
+        document.getElementById('description').innerHTML = loadingText;
       }
       
-      /**
-       * Load more followers with pagination
-       */
-      async function loadMoreFollowers() {
-        try {
-          if (isLoading) return;
-          isLoading = true;
-          
-          const followersData = await fetchFollowers(followersAfterCursor);
-          const loadingEl = document.getElementById('followers-loading');
-          loadingEl.style.display = 'block';
-          
-          const followersGrid = document.getElementById('followers-grid');
-          followersData.data.forEach(({ follow }) => {
-            followersGrid.appendChild(createUserCard(follow.user));
-          });
-          
-          followersAfterCursor = followersData.meta.end_cursor;
-          if (followersData.meta.has_next_page) {
-            isLoading = false;
-            await loadMoreFollowers();
-          } else {
-            loadingEl.style.display = 'none';
-            isLoading = false;
-          }
-        } catch (error) {
-          console.error('Error loading followers:', error);
-          document.getElementById('followers-loading').style.display = 'none';
-          isLoading = false;
-        }
-      }
-      
-      /**
-       * Load more following users with pagination
-       */
-      async function loadMoreFollowing() {
-        try {
-          if (isLoading) return;
-          isLoading = true;
-          
-          const followingData = await fetchFollowing(followingAfterCursor);
-          const loadingEl = document.getElementById('following-loading');
-          loadingEl.style.display = 'block';
-          
-          const followingGrid = document.getElementById('following-grid');
-          followingData.data.forEach(({ follow }) => {
-            followingGrid.appendChild(createUserCard(follow.user));
-          });
-          
-          followingAfterCursor = followingData.meta.end_cursor;
-          if (followingData.meta.has_next_page) {
-            isLoading = false;
-            await loadMoreFollowing();
-          } else {
-            loadingEl.style.display = 'none';
-            isLoading = false;
-          }
-        } catch (error) {
-          console.error('Error loading following:', error);
-          document.getElementById('following-loading').style.display = 'none';
-          isLoading = false;
-        }
-      }
-      
-      /**
-       * Load friends (mutual follows) by comparing followers and following
-       */
-      async function getFriends() {
-        try {
-          if (isLoading) return;
-          isLoading = true;
-          
-          const following = await fetchFollowing();
-          const followers = await fetchFollowers();
-          
-          const followingUsers = new Set(following.data.map(f => f.follow.user.username));
-          const followerUsers = new Set(followers.data.map(f => f.follow.user.username));
-          
-          // Find intersection (users who follow each other)
-          const friends = following.data
-            .filter(f => followerUsers.has(f.follow.user.username))
-            .map(f => f.follow.user);
-          
-          document.getElementById('friends-count').textContent = friends.length;
-          
-          const friendsGrid = document.getElementById('friends-grid');
-          friendsGrid.innerHTML = '';
-          
-          friends.forEach(friend => {
-            friendsGrid.appendChild(createUserCard(friend));
-          });
-          
-          document.getElementById('friends-loading').style.display = 'none';
-          isLoading = false;
-        } catch (error) {
-          console.error('Error loading friends:', error);
-          document.getElementById('friends-loading').style.display = 'none';
-          isLoading = false;
-        }
-      }
+      // ...existing followers and following functions...
       
       /**
        * Sort and display projects according to current sort criterion
@@ -1225,14 +1146,17 @@
             <div class="ago">ago</div>
           `;
           
-          // Get initial counts
-          const [followingCount, followersCount] = await Promise.all([
+          // Get initial counts directly from API
+          const [followingCount, followersCount, stats] = await Promise.all([
             fetchFollowingCount(),
-            fetchFollowersCount()
+            fetchFollowersCount(),
+            fetchUserStats()
           ]);
           
-          document.getElementById('following-count').textContent = followingCount || '0';
-          document.getElementById('followers-count').textContent = followersCount || '0';
+          document.getElementById('following-count').innerHTML = formatNumber(followingCount || 0);
+          document.getElementById('followers-count').innerHTML = formatNumber(followersCount || 0);
+          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
+          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
           
           // Update iframe if needed
           const iframe = document.querySelector('iframe');
@@ -1240,13 +1164,14 @@
             iframe.src = `https://websim.ai/@${username}/my-projects`;
           }
           
+          // Reset project data
+          projectsData = [];
+          projectsAfterCursor = null;
+          
           // Fetch all data concurrently
           Promise.allSettled([
             fetchRecentFollower(),
             loadMoreProjects(),
-            loadMoreFollowers(),
-            loadMoreFollowing(),
-            getFriends(),
             fetchUnpostedProjects().then(unpostedCount => {
               updateStatWithPercentile('unposted-count', unpostedCount, 'unposted');
             })
@@ -1388,8 +1313,8 @@
             <div class="card-content">
               <h3>${project.title || 'Untitled Project'}</h3>
               <div class="card-stats">
-                <span>👁️ ${project.stats.views.toLocaleString()}</span>
-                <span>❤️ ${project.stats.likes.toLocaleString()}</span>
+                <span>👁️ ${formatNumber(project.stats.views)}</span>
+                <span>❤️ ${formatNumber(project.stats.likes)}</span>
               </div>
               <div class="card-meta">
                 ${getRelativeTimeString(new Date(project.created_at))} ago
@@ -1430,6 +1355,12 @@
       /**
        * Generate a bio text based on user stats
        */
+      /* @tweakable Include additional details in auto-generated bio */
+      const bioIncludeProjectDetails = true;
+
+      /* @tweakable Include social stats in auto-generated bio */
+      const bioIncludeSocialStats = true;
+      
       function generateBioText(userStats) {
         if (!userStats || !window.currentUserProfile) {
           return 'Loading bio...';
@@ -1449,56 +1380,60 @@
         
         bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
         if (totalViews > 0) { 
-          bioText += ` with ${totalViews.toLocaleString()} total views`; 
+          bioText += ` with ${formatNumber(totalViews)} total views`; 
         }
         bioText += '. ';
         
-        // Sort projects to find latest, most viewed, most liked
-        const sortedByDate = [...projectsData].sort((a, b) => 
-          new Date(b.project.created_at) - new Date(a.project.created_at));
-        
-        const sortedByViews = [...projectsData].sort((a, b) => 
-          b.project.stats.views - a.project.stats.views);
-        
-        const sortedByLikes = [...projectsData].sort((a, b) => 
-          b.project.stats.likes - a.project.stats.likes);
-        
-        // Add latest project info
-        if (sortedByDate.length > 0) {
-          const latestProject = sortedByDate[0].project;
-          bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: #2196f3;">${latestProject.title || 'Untitled'}</a>`;
+        if (bioIncludeProjectDetails) {
+          // Sort projects to find latest, most viewed, most liked
+          const sortedByDate = [...projectsData].sort((a, b) => 
+            new Date(b.project.created_at) - new Date(a.project.created_at));
           
-          const projectDate = new Date(latestProject.created_at).toLocaleDateString();
-          if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
-            bioText += ` which I made on ${projectDate}`;
+          const sortedByViews = [...projectsData].sort((a, b) => 
+            b.project.stats.views - a.project.stats.views);
+          
+          const sortedByLikes = [...projectsData].sort((a, b) => 
+            b.project.stats.likes - a.project.stats.likes);
+          
+          // Add latest project info
+          if (sortedByDate.length > 0) {
+            const latestProject = sortedByDate[0].project;
+            bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: #2196f3;">${latestProject.title || 'Untitled'}</a>`;
+            
+            const projectDate = new Date(latestProject.created_at).toLocaleDateString();
+            if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
+              bioText += ` which I made on ${projectDate}`;
+            }
+            bioText += '. ';
           }
-          bioText += '. ';
-        }
-        
-        // Add most viewed project info
-        if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
-          const mostViewedProject = sortedByViews[0].project;
-          bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: #2196f3;">${mostViewedProject.title || 'Untitled'}</a> with ${mostViewedProject.stats.views.toLocaleString()} views. `;
-        }
-        
-        // Add most liked project info
-        if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
-          const mostLikedProject = sortedByLikes[0].project;
-          bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: #2196f3;">${mostLikedProject.title || 'Untitled'}</a> with ${mostLikedProject.stats.likes.toLocaleString()} likes. `;
+          
+          // Add most viewed project info
+          if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
+            const mostViewedProject = sortedByViews[0].project;
+            bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: #2196f3;">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
+          }
+          
+          // Add most liked project info
+          if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
+            const mostLikedProject = sortedByLikes[0].project;
+            bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: #2196f3;">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
+          }
         }
         
         // Add social info
-        let socialText = [];
-        if (userStats.following > 0) {
-          socialText.push(`I'm following ${userStats.following.toLocaleString()} people`);
-        }
-        
-        if (userStats.followers > 0) {
-          socialText.push(`${userStats.followers.toLocaleString()} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
-        }
-        
-        if (socialText.length > 0) {
-          bioText += socialText.join(' and ') + '.';
+        if (bioIncludeSocialStats) {
+          let socialText = [];
+          if (userStats.following > 0) {
+            socialText.push(`I'm following ${formatNumber(userStats.following)} people`);
+          }
+          
+          if (userStats.followers > 0) {
+            socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
+          }
+          
+          if (socialText.length > 0) {
+            bioText += socialText.join(' and ') + '.';
+          }
         }
         
         return bioText;
@@ -1604,148 +1539,17 @@
         window.backgroundAnimationId = animationId;
       }
       
-      // ===== EVENT LISTENERS =====
+      // Initialize the profile page
+      document.querySelector('.username-hint').classList.remove('hidden');
       
-      // Search toggle button
-      document.getElementById('search-toggle').addEventListener('click', () => {
-        const searchInput = document.getElementById('user-search');
-        searchInput.focus();
-      });
-      
-      // Username search input
-      document.getElementById('user-search').addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          document.querySelector('.username-hint').classList.add('hidden');
-          
-          const searchUsername = e.target.value.trim().replace('@', '');
-          if (!searchUsername) return;
-          
-          const iframe = document.querySelector('iframe');
-          if (iframe) {
-            iframe.src = `https://websim.ai/@${searchUsername}`;
-          }
-          
-          // Reset data
-          projectsData = [];
-          projectsAfterCursor = null;
-          followersAfterCursor = null;
-          followingAfterCursor = null;
-          
-          // Clear grids
-          document.getElementById('projects-grid').innerHTML = '';
-          document.getElementById('followers-grid').innerHTML = '';
-          document.getElementById('following-grid').innerHTML = '';
-          document.getElementById('friends-grid').innerHTML = '';
-          
-          resetStatsToLoading();
-          username = searchUsername;
-          
-          await initProfile();
-          e.target.value = '';
-        }
-      });
-      
-      // Recent follower click
-      document.getElementById('recent-follower').addEventListener('click', function() {
-        const recentFollowerNameEl = this.querySelector('.recent-follower-name');
-        if (!recentFollowerNameEl) return;
-        
-        const followerUsername = recentFollowerNameEl.textContent;
-        if (!followerUsername) return;
-        
-        document.getElementById('username').textContent = followerUsername;
-        
-        // Reset data
-        projectsData = [];
-        projectsAfterCursor = null;
-        followersAfterCursor = null;
-        followingAfterCursor = null;
-        
-        // Clear grids
-        document.getElementById('projects-grid').innerHTML = '';
-        document.getElementById('followers-grid').innerHTML = '';
-        document.getElementById('following-grid').innerHTML = '';
-        document.getElementById('friends-grid').innerHTML = '';
-        
-        resetStatsToLoading();
-        
-        // Update iframe
-        const iframe = document.querySelector('iframe');
-        if (iframe) {
-          iframe.src = `https://websim.ai/@${followerUsername}`;
-        }
-        
-        username = followerUsername;
+      // Wait for WebsimSocket to initialize
+      room.initialize().then(() => {
         initProfile();
       });
       
-      // Editable username field
-      document.getElementById('username').addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          
-          document.querySelector('.username-hint').classList.add('hidden');
-          const searchUsername = e.target.textContent.trim().replace('@', '');
-          if (!searchUsername) return;
-          
-          const iframe = document.querySelector('iframe');
-          if (iframe) {
-            iframe.src = `https://websim.ai/@${searchUsername}`;
-          }
-          
-          // Reset data
-          projectsData = [];
-          projectsAfterCursor = null;
-          followersAfterCursor = null;
-          followingAfterCursor = null;
-          
-          // Clear all grids
-          document.getElementById('projects-grid').innerHTML = '';
-          document.getElementById('followers-grid').innerHTML = '';
-          document.getElementById('following-grid').innerHTML = '';
-          document.getElementById('friends-grid').innerHTML = '';
-          
-          // Reset stats displays
-          resetStatsToLoading();
-          
-          // Update current username and initialize new profile
-          username = searchUsername;
-          await initProfile();
-          e.target.blur();
-        }
-      });
+      // ===== EVENT LISTENERS =====
       
-      // Modal close button
-      document.querySelector('.modal-close').addEventListener('click', () => {
-        const modal = document.querySelector('.modal');
-        const overlay = document.querySelector('.modal-overlay');
-        
-        modal.classList.remove('active');
-        overlay.classList.remove('active');
-        
-        setTimeout(() => {
-          modal.querySelector('iframe').src = '';
-        }, 300);
-      });
-      
-      // Modal overlay click to close
-      document.querySelector('.modal-overlay').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-          document.querySelector('.modal-close').click();
-        }
-      });
-      
-      // Keyboard shortcut (Escape) to close modal
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.querySelector('.modal.active')) {
-          document.querySelector('.modal-close').click();
-        }
-      });
-      
-      // Initialize the profile page
-      document.querySelector('.username-hint').classList.remove('hidden');
-      initProfile();
+      // ...existing event listeners...
     </script>
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
