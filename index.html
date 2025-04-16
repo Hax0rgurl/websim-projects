@@ -1,12 +1,604 @@
-<!DOCTYPE html>
 <html>
   <head>
     <base href="abandonedmuse" />
     <title>User Profile Viewer</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <style>
+      /* Synthwave color palette and theme */
+      :root {
+        /* @tweakable Primary neon color */
+        --neon-pink: #ff00ff;
+        
+        /* @tweakable Secondary neon color */
+        --neon-blue: #00faff;
+        
+        /* @tweakable Tertiary neon color */
+        --neon-purple: #b967ff;
+        
+        /* @tweakable Background color */
+        --bg-color: #120023;
+        
+        /* @tweakable Card background color */
+        --card-bg: rgba(19, 19, 35, 0.8);
+        
+        /* @tweakable Text color */
+        --text-color: #ffffff;
+        
+        /* @tweakable Secondary text color */
+        --text-secondary: #aaaacc;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      @keyframes glow {
+        0% { filter: drop-shadow(0 0 5px var(--neon-pink)); }
+        33% { filter: drop-shadow(0 0 5px var(--neon-blue)); }
+        66% { filter: drop-shadow(0 0 5px var(--neon-purple)); }
+        100% { filter: drop-shadow(0 0 5px var(--neon-pink)); }
+      }
+      
+      @keyframes neonPulse {
+        0% { box-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink); }
+        33% { box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue); }
+        66% { box-shadow: 0 0 5px var(--neon-purple), 0 0 10px var(--neon-purple); }
+        100% { box-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink); }
+      }
+      
+      .synthwave-outline {
+        border: 2px solid var(--neon-pink);
+        box-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink);
+        animation: neonPulse 4s infinite alternate;
+      }
+      
+      .loading-spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-top: 3px solid var(--neon-blue);
+        border-right: 3px solid var(--neon-pink);
+        border-radius: 50%;
+        animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        box-shadow: 0 0 10px var(--neon-blue);
+      }
+      
+      .loading-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 2rem 0;
+        opacity: 0.8;
+      }
+      
+      @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+      
+      .loading-container {
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      .value.joined {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .value.joined .ago {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: -0.5rem;
+      }
+      
+      /* Synthwave grid background */
+      .synthwave-grid {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+        perspective: 1000px;
+        background: var(--bg-color);
+        overflow: hidden;
+      }
+      
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        background: var(--bg-color);
+        padding: 2rem;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .profile-header {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-blue);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2rem;
+        border: 2px solid var(--neon-pink);
+        animation: neonPulse 8s infinite alternate;
+      }
+      
+      .avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: #2a2a2a;
+        border: 3px solid var(--neon-purple);
+        box-shadow: 0 0 15px var(--neon-purple);
+      }
+      
+      .profile-info h1 {
+        font-size: 2.5rem;
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .profile-info h1 span {
+        outline: none;
+        border-bottom: 2px solid var(--neon-pink);
+        padding: 0 4px;
+      }
+      
+      .username-hint {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-left: 1rem;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+        user-select: none;
+        cursor: default;
+      }
+      
+      .username-hint.hidden {
+        opacity: 0;
+      }
+      
+      #username[contenteditable=true]:hover {
+        background: rgba(255, 0, 255, 0.1);
+        border-radius: 4px;
+        cursor: text;
+      }
+      
+      #username[contenteditable=true]:focus {
+        background: rgba(255, 0, 255, 0.2);
+        border-radius: 4px;
+      }
+      
+      .social-links {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+      
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+        margin-top: 1rem;
+      }
+      
+      .stat-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 0 10px var(--neon-blue);
+        text-align: center;
+        border: 2px solid var(--neon-blue);
+        transition: all 0.3s ease;
+      }
+      
+      .stat-card:hover {
+        box-shadow: 0 0 15px var(--neon-blue), 0 0 25px var(--neon-pink);
+        transform: translateY(-3px);
+      }
+      
+      .stat-card h3 {
+        color: var(--text-secondary);
+        font-size: 1.3rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        text-align: center;
+        text-shadow: 0 0 5px var(--neon-purple);
+      }
+      
+      .stat-card .value {
+        font-size: 3rem;
+        font-weight: bold;
+        color: var(--text-color);
+        text-align: center;
+        text-shadow: 0 0 5px var(--neon-pink);
+      }
+      
+      .view-button {
+        background: rgba(19, 19, 35, 0.8);
+        border: 2px solid var(--neon-purple);
+        color: var(--text-secondary);
+        padding: 0.8rem 1.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 1.1rem;
+        box-shadow: 0 0 5px var(--neon-purple);
+      }
+      
+      .view-button:hover {
+        background: rgba(40, 40, 70, 0.8);
+        color: var(--text-color);
+        box-shadow: 0 0 15px var(--neon-purple);
+      }
+      
+      .view-button.active {
+        background: var(--neon-purple);
+        color: var(--text-color);
+        box-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple);
+      }
+      
+      .view-content {
+        margin-top: 1.5rem;
+      }
+      
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+      
+      .card {
+        background: var(--card-bg);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 0 10px var(--neon-pink);
+        transition: all 0.3s;
+        text-decoration: none;
+        border: 2px solid var(--neon-pink);
+      }
+      
+      .card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-blue);
+      }
+      
+      .card-content {
+        padding: 1rem;
+      }
+      
+      .card h3 {
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .card-meta {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+      
+      .loading-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 2rem 0;
+      }
+      
+      .recent-follower-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        min-height: 100%;
+        border-radius: 1rem;
+        box-shadow: 0 0 10px var(--neon-blue);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        border: 2px solid var(--neon-blue);
+      }
+      
+      .recent-follower-card h3 {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        text-align: center;
+        text-shadow: 0 0 5px var(--neon-purple);
+      }
+      
+      .recent-follower-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--neon-purple);
+        box-shadow: 0 0 10px var(--neon-purple);
+      }
+      
+      .recent-follower-name {
+        font-size: 1.1rem;
+        color: var(--text-color);
+        text-align: center;
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .load-more {
+        display: none;
+        margin: 2rem auto;
+        padding: 1rem 2rem;
+        background: var(--neon-purple);
+        border: none;
+        border-radius: 0.5rem;
+        color: white;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: all 0.3s;
+        box-shadow: 0 0 10px var(--neon-purple);
+      }
+      
+      .load-more:hover {
+        background: var(--neon-pink);
+        box-shadow: 0 0 20px var(--neon-pink);
+        transform: scale(1.05);
+      }
+      
+      .preview-image {
+        width: 100%;
+        height: 200px;
+        background: #2a2a2a;
+        object-fit: cover;
+        transition: all 0.3s;
+        border-bottom: 2px solid var(--neon-blue);
+      }
+      
+      .card:hover .preview-image {
+        opacity: 0.9;
+        box-shadow: 0 5px 15px var(--neon-blue);
+      }
+      
+      .card-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+      
+      .user-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 1rem;
+      }
+      
+      .user-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s;
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 2px solid var(--neon-purple);
+        box-shadow: 0 0 5px var(--neon-purple);
+      }
+      
+      .user-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px var(--neon-purple), 0 0 30px var(--neon-pink);
+      }
+      
+      .user-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 0.5rem;
+        background: #eee;
+        border: 2px solid var(--neon-blue);
+        box-shadow: 0 0 10px var(--neon-blue);
+      }
+      
+      .user-name {
+        font-size: 0.9rem;
+        color: var(--text-color);
+        word-break: break-word;
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .sort-controls {
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      
+      .sort-button {
+        background: var(--card-bg);
+        border: 2px solid var(--neon-blue);
+        color: var(--text-secondary);
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .sort-button:hover {
+        background: rgba(40, 40, 70, 0.8);
+        color: var(--text-color);
+        box-shadow: 0 0 15px var(--neon-blue);
+      }
+      
+      .sort-button.active {
+        background: var(--neon-blue);
+        color: var(--text-color);
+        box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+      }
+      
+      .search-box {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+      }
+      
+      .search-input {
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 2px solid var(--neon-pink);
+        background: rgba(19, 19, 35, 0.8);
+        color: white;
+        font-size: 16px;
+        width: 200px;
+        box-shadow: 0 0 10px var(--neon-pink);
+      }
+      
+      .search-input::placeholder {
+        color: var(--text-secondary);
+      }
+      
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(18, 0, 35, 0.9);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        z-index: 1000;
+      }
+      
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      
+      .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.7);
+        background: var(--card-bg);
+        border-radius: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        z-index: 1001;
+        width: 80vw;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        border: 3px solid var(--neon-pink);
+        box-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-pink);
+      }
+      
+      .modal.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      
+      .modal-close {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: all 0.3s;
+        text-shadow: 0 0 10px var(--neon-pink);
+      }
+      
+      .modal-close:hover {
+        transform: scale(1.1);
+        text-shadow: 0 0 15px var(--neon-pink), 0 0 30px var(--neon-blue);
+      }
+      
+      .modal iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 1rem;
+        flex: 1;
+        margin-bottom: 10px;
+      }
+      
+      .open-new-tab {
+        text-align: center;
+        padding: 10px;
+        text-decoration: none;
+        color: var(--neon-blue);
+        font-size: 1rem;
+        transition: all 0.3s;
+        text-shadow: 0 0 5px var(--neon-blue);
+      }
+      
+      .open-new-tab:hover {
+        color: var(--neon-pink);
+        text-shadow: 0 0 10px var(--neon-pink);
+      }
+      
+      #recent-follower {
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      
+      #recent-follower:hover {
+        transform: scale(1.05);
+      }
+      
+      .search-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--neon-pink);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        cursor: pointer;
+        margin-left: 10px;
+        box-shadow: 0 0 10px var(--neon-pink);
+        transition: all 0.3s;
+      }
+      
+      .search-toggle:hover {
+        box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-blue);
+        transform: scale(1.1);
+      }
+    </style>
   </head>
   <body>
-    <canvas id="grid-background"></canvas>
+    <div class="synthwave-grid" id="synthwave-grid"></div>
     <div class="container" id="app">
       <div class="search-box">
         <input type="text" class="search-input" placeholder="Enter username..." id="user-search">
@@ -17,7 +609,7 @@
           <img class="avatar" id="avatar" alt="Profile avatar">
           <div class="profile-info">
             <h1>
-              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed var(--neon-secondary); padding: 0 4px;"></span>
+              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed #555; padding: 0 4px;"></span>
               <span class="username-hint">← You can edit the name!</span>
             </h1>
             <p id="description"></p>
@@ -33,7 +625,7 @@
       </div>
       <div class="stats">
         <div class="stat-card">
-          <h3><span id="project-count-label">🌐 Projects</span></h3>
+          <h3>🌐 Projects</h3>
           <div class="value" id="sites-count"><div class="loading-spinner"></div></div>
         </div>
         <div class="stat-card">
@@ -73,6 +665,7 @@
           <div class="value" id="unposted-count"><div class="loading-spinner"></div></div>
         </div>
       </div>
+      
       <div class="content-section">
         <div class="sort-controls">
           <button class="view-button active" data-view="projects">Projects</button>
@@ -81,18 +674,10 @@
           <button class="view-button" data-view="friends">Friends</button>
         </div>
         <div id="projects-view" class="view-content">
-          <div class="controls-row">
-             <div class="sort-controls project-sort-controls">
-               <button class="sort-button active" data-sort="recent">Recent</button>
-               <button class="sort-button" data-sort="views">Most Viewed</button>
-               <button class="sort-button" data-sort="likes">Most Liked</button>
-             </div>
-             <div class="visibility-controls" id="visibility-filter-controls" style="display: none;">
-                <span style="margin-right: 0.5rem; color: var(--text-secondary);">Show:</span>
-                <button class="visibility-button" data-filter="public">Public</button>
-                <button class="visibility-button" data-filter="private">Private</button>
-                <button class="visibility-button" data-filter="all">All</button>
-             </div>
+          <div class="sort-controls">
+            <button class="sort-button active" data-sort="recent">Recent</button>
+            <button class="sort-button" data-sort="views">Most Viewed</button>
+            <button class="sort-button" data-sort="likes">Most Liked</button>
           </div>
           <div class="grid" id="projects-grid"></div>
           <div class="loading-container" id="projects-loading">
@@ -127,18 +712,1136 @@
         <a class="open-new-tab" target="_blank">↗️ Open in new tab</a>
       </div>
     </div>
+    
+    <script>
+      // Initialize WebsimSocket for persistent data storage
+      const room = new WebsimSocket();
+      
+      // Config and Tweakable Values
+      /* @tweakable Number of floating images in the background */
+      const backgroundParticleCount = 150;
+      
+      /* @tweakable Base speed factor for floating images (0.5-2.0) */
+      const backgroundParticleSpeed = 1.0;
+      
+      /* @tweakable Base size of floating image particles in pixels */
+      const particleBaseSize = 60;
+      
+      /* @tweakable Opacity of floating image particles (0.0-1.0) */
+      const particleOpacity = 0.1;
+      
+      /* @tweakable Size of user avatar in follower/following lists in pixels */
+      const userAvatarSize = 80;
+      
+      /* @tweakable Height of the project preview image in pixels */
+      const projectPreviewHeight = 200;
+      
+      /* @tweakable Maximum projects to load per batch */
+      const projectBatchSize = 50;
+      
+      /* @tweakable Maximum followers/following to load per batch */
+      const userBatchSize = 50;
 
-    <!-- JavaScript Files -->
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/stats.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/background.js"></script>
-    <script src="js/dataLoaders.js"></script>
-    <script src="js/profile.js"></script>
-    <script src="js/listeners.js"></script>
-    <script src="js/search.js"></script>
-    <script src="js/main.js"></script>
+      /* @tweakable Format large numbers with commas (true) or use compact notation (false) */
+      const useCommaFormatting = true;
+      
+      /* @tweakable Enable percentile calculations for stats (can slow down page for large datasets) */
+      const enablePercentiles = true;
+      
+      /* @tweakable Number of projects to load before calculating initial stats */
+      const initialStatsProjectCount = 10;
+      
+      /* @tweakable Enable automatically generated bio text */
+      const enableAutoBio = true;
+      
+      /* @tweakable Thresholds for Popularity Score (Views, Likes) */
+      const popularityThresholds = [
+        { score: 10, views: 20000, likes: 325 },
+        { score: 9, views: 10000, likes: 250 },
+        { score: 8, views: 5000, likes: 120 },
+        { score: 7, views: 2500, likes: 75 },
+        { score: 6, views: 1000, likes: 40 },
+        { score: 5, views: 500, likes: 20 },
+        { score: 4, views: 250, likes: 10 },
+        { score: 3, views: 100, likes: 5 },
+        { score: 2, views: 0, likes: 10 },  // Score based only on likes
+        { score: 1, views: 10, likes: 0 }   // Score based only on views
+      ];
+      
+      /* @tweakable Thresholds for Quality Rating (Views per Like, lower is better) */
+      const ratingThresholds = [
+        { score: 1, viewsPerLike: 100 },
+        { score: 2, viewsPerLike: 75 },
+        { score: 3, viewsPerLike: 65 },
+        { score: 4, viewsPerLike: 50 },
+        { score: 5, viewsPerLike: 40 }  // Max score if VPL <= 40 or likes > 0
+      ];
+      
+      /* @tweakable Default username to load on page load */
+      const defaultUsername = 'abandonedmuse';
+      
+      // Synthwave Grid Background Settings
+      /* @tweakable Number of horizontal grid lines */
+      const gridLinesX = 20;
+      
+      /* @tweakable Number of vertical grid lines */
+      const gridLinesY = 15;
+      
+      /* @tweakable Grid line thickness in pixels */
+      const gridLineThickness = 2;
+      
+      /* @tweakable Grid animation speed (lower is slower) */
+      const gridAnimationSpeed = 0.05;
+      
+      /* @tweakable Grid horizon line position (0-1, 0.5 is middle) */
+      const gridHorizonPosition = 0.5;
+      
+      /* @tweakable Sun size (percentage of screen height) */
+      const sunSize = 30;
+      
+      /* @tweakable Sun glow intensity (0-1) */
+      const sunGlowIntensity = 0.7;
+      
+      /* @tweakable Primary grid color */
+      const gridColorPrimary = '#ff00ff';
+      
+      /* @tweakable Secondary grid color */
+      const gridColorSecondary = '#00faff';
+      
+      /* @tweakable Enable sun in background */
+      const showSun = true;
+      
+      /* @tweakable Enable mountains in background */
+      const showMountains = true;
+      
+      /* @tweakable Mountain height (percentage of screen height) */
+      const mountainHeight = 25;
+      
+      /* @tweakable Show star field in background */
+      const showStars = true;
+      
+      /* @tweakable Number of stars */
+      const starCount = 200;
+      
+      /* @tweakable Star flicker speed */
+      const starFlickerSpeed = 0.1;
+      
+      // State variables
+      let username = defaultUsername;
+      let projectsAfterCursor = null;
+      let followersAfterCursor = null;
+      let followingAfterCursor = null;
+      let currentSort = 'recent';
+      let projectsData = [];
+      let isLoading = false;
+      let animationFrame;
+      
+      // ===== DATA HANDLING FUNCTIONS =====
+      
+      /**
+       * Format numbers according to settings
+       */
+      /* @tweakable Maximum number to display before using K/M notation (e.g., 5.2K) */
+      const numberFormatThreshold = 10000;
+      
+      function formatNumber(num) {
+        if (num === undefined || num === null) return '0';
+        
+        if (useCommaFormatting || num < numberFormatThreshold) {
+          return num.toLocaleString();
+        } else {
+          if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+          } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+          } else {
+            return num.toString();
+          }
+        }
+      }
+      
+      /**
+       * Store user statistics in WebsimSocket persistent storage
+       */
+      async function storeUserStats(stats) {
+        try {
+          await room.collection('user_stats').create({
+            username: stats.username,
+            stats: stats,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          console.error('Error storing user stats:', error);
+        }
+      }
+      
+      /**
+       * Calculate percentile of a value compared to stored stats
+       */
+      async function calculatePercentile(value, statName) {
+        if (!enablePercentiles) return null;
+        
+        try {
+          const records = room.collection('user_stats').getList();
+          if (!records || records.length === 0) return null;
+          
+          const values = records
+            .filter(r => r.stats && r.stats[statName] !== undefined && r.stats[statName] !== null)
+            .map(r => r.stats[statName]);
+          
+          if (values.length === 0) return null;
+          
+          values.sort((a, b) => b - a);
+          const position = values.findIndex(v => v <= value) + 1;
+          return Math.round((1 - (position / values.length)) * 100);
+        } catch (error) {
+          console.error('Error calculating percentile:', error);
+          return null;
+        }
+      }
+      
+      /**
+       * Update a stat element with value and percentile information
+       */
+      async function updateStatWithPercentile(elementId, value, statName) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        if (isNaN(value) || value === undefined || value === null) {
+          element.innerHTML = '0';
+          return;
+        }
+        
+        try {
+          const percentile = await calculatePercentile(value, statName);
+          let suffix = "";
+          
+          if (statName === 'popularity') {
+            suffix = "/10";
+          } else if (statName === 'rating') {
+            suffix = "/5";
+          }
+          
+          if (percentile === null || isNaN(percentile)) {
+            element.innerHTML = `${formatNumber(value)}${suffix}`;
+          } else {
+            element.innerHTML = `
+              ${formatNumber(value)}${suffix}
+              <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
+                Top ${percentile}%
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error(`Error updating stat ${elementId}:`, error);
+          element.innerHTML = `${formatNumber(value) || '0'}`;
+        }
+      }
+      
+      /**
+       * Format relative time (e.g., "2d" for 2 days ago)
+       */
+      function getRelativeTimeString(date) {
+        if (!(date instanceof Date)) {
+          date = new Date(date);
+        }
+        
+        if (isNaN(date.getTime())) {
+          return 'Invalid date';
+        }
+        
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        const diffMonths = Math.floor(diffDays / 30);
+        const diffYears = Math.floor(diffDays / 365);
+        
+        if (diffYears > 0) return `${diffYears}y`;
+        if (diffMonths > 0) return `${diffMonths}mo`;
+        if (diffDays > 0) return `${diffDays}d`;
+        if (diffHours > 0) return `${diffHours}h`;
+        if (diffMins > 0) return `${diffMins}m`;
+        return `${diffSecs}s`;
+      }
+      
+      // ===== API FUNCTIONS =====
+      
+      /**
+       * Fetch a user's profile information
+       */
+      async function fetchUserProfile() {
+        try {
+          const response = await fetch(`/api/v1/users/${username}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch user: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.user;
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          return null;
+        }
+      }
+      
+      /**
+       * Fetch count of users the profile is following
+       */
+      async function fetchFollowingCount() {
+        try {
+          const response = await fetch(`/api/v1/users/${username}/following?count=true`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch following count: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.following.meta.count || 0;
+        } catch (error) {
+          console.error('Error fetching following count:', error);
+          return 0;
+        }
+      }
+      
+      /**
+       * Fetch count of users following the profile
+       */
+      async function fetchFollowersCount() {
+        try {
+          const response = await fetch(`/api/v1/users/${username}/followers?count=true`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch followers count: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.followers.meta.count || 0;
+        } catch (error) {
+          console.error('Error fetching followers count:', error);
+          return 0;
+        }
+      }
+      
+      /**
+       * Fetch a user's projects with pagination
+       */
+      async function fetchProjects(afterCursor = null) {
+        try {
+          const params = new URLSearchParams();
+          if (afterCursor) params.append('after', afterCursor);
+          params.append('first', projectBatchSize.toString());
+          params.append('posted', 'true');
+          params.append('sort_by', 'updated_at');
+          
+          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch projects: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return {
+            data: data.projects.data.map(item => ({
+              project: item.project,
+              project_revision: item.project_revision,
+              site: item.site,
+              cursor: item.cursor
+            })),
+            meta: data.projects.meta
+          };
+        } catch (error) {
+          console.error('Error fetching projects:', error);
+          return { data: [], meta: { has_next_page: false } };
+        }
+      }
+      
+      /**
+       * Fetch a user's stats 
+       */
+      async function fetchUserStats() {
+        try {
+          const response = await fetch(`/api/v1/users/${username}/stats`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch user stats: ${response.status}`);
+          }
+          const data = await response.json();
+          return data.stats;
+        } catch (error) {
+          console.error('Error fetching user stats:', error);
+          return { total_views: 0, total_likes: 0 };
+        }
+      }
+      
+      /**
+       * Fetch the most recent follower
+       */
+      async function fetchRecentFollower() {
+        try {
+          const response = await fetch(`/api/v1/users/${username}/followers?first=1`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch recent follower: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          const recentFollowerEl = document.getElementById('recent-follower');
+          
+          // Clear previous loading state or follower info
+          recentFollowerEl.innerHTML = ''; 
+          
+          if (!data || !data.followers || !data.followers.data || data.followers.data.length === 0) {
+             recentFollowerEl.innerHTML = `<div>No followers yet!</div>`;
+             recentFollowerEl.style.cursor = 'default';
+             return null;
+          }
+          
+          const follower = data.followers.data[0].follow.user;
+          if (!follower) {
+              recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
+              recentFollowerEl.style.cursor = 'default';
+              return null;
+          }
+          
+          recentFollowerEl.innerHTML = `
+            <img class="recent-follower-avatar" src="${follower.avatar_url || ''}" alt="Recent follower avatar" onerror="this.src='https://images.websim.ai/avatar/anonymous'">
+            <div class="recent-follower-name">${follower.username}</div>
+          `;
+          recentFollowerEl.style.cursor = 'pointer';
+          return follower;
+        } catch (error) {
+          console.error('Error fetching recent follower:', error);
+          const recentFollowerEl = document.getElementById('recent-follower');
+          recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
+          return null;
+        }
+      }
+      
+      /**
+       * Fetch count of unposted projects
+       */
+      async function fetchUnpostedProjects() {
+        try {
+          const params = new URLSearchParams();
+          params.append('first', '100');
+          params.append('posted', 'false');
+          
+          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch unposted projects: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          let totalCount = data.projects.data.length;
+          let hasNextPage = data.projects.meta.has_next_page;
+          let nextCursor = data.projects.meta.end_cursor;
+          
+          // Continue fetching if there are more pages
+          while (hasNextPage) {
+            params.set('after', nextCursor);
+            const nextResponse = await fetch(`/api/v1/users/${username}/projects?${params}`);
+            
+            if (!nextResponse.ok) {
+              console.error('Error fetching more unposted projects');
+              break;
+            }
+            
+            const nextData = await nextResponse.json();
+            totalCount += nextData.projects.data.length;
+            hasNextPage = nextData.projects.meta.has_next_page;
+            nextCursor = nextData.projects.meta.end_cursor;
+          }
+          
+          return totalCount;
+        } catch (error) {
+          console.error('Error fetching unposted projects:', error);
+          return 0;
+        }
+      }
+      
+      // ===== UI DATA LOADING FUNCTIONS =====
+      
+      /**
+       * Update stats with direct API data
+       */
+      async function updateWithDirectStats() {
+        try {
+          // Fetch direct stats from API
+          const stats = await fetchUserStats();
+          
+          // Update views and likes directly from API
+          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
+          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
+          
+          // Calculate popularity and rating based on these direct values
+          let popularityScore = 0;
+          for (const threshold of popularityThresholds) {
+            if ((stats.total_views || 0) >= threshold.views && (stats.total_likes || 0) >= threshold.likes) {
+              popularityScore = threshold.score;
+              break;
+            }
+          }
+          
+          // Calculate quality rating
+          let rating = 0;
+          if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
+            const viewsPerLike = stats.total_views / stats.total_likes;
+            rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
+          } else if ((stats.total_likes || 0) > 0) {
+            rating = 5; // Max rating if likes but no views
+          }
+          
+          // Update the stats display
+          await updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
+          await updateStatWithPercentile('rating-count', rating, 'rating');
+          
+          return stats;
+        } catch (error) {
+          console.error('Error updating direct stats:', error);
+        }
+      }
+      
+      /**
+       * Load and process all projects for a user
+       */
+      async function loadMoreProjects() {
+        try {
+          if (isLoading) return;
+          isLoading = true;
+          
+          const projectLoadingEl = document.getElementById('projects-loading');
+          const loadMoreBtn = document.getElementById('load-more-projects');
+          
+          projectLoadingEl.style.display = 'block';
+          loadMoreBtn.style.display = 'none';
+          
+          const data = await fetchProjects(projectsAfterCursor);
+          projectsData = projectsData.concat(data.data);
+          
+          // Update projects count immediately
+          document.getElementById('sites-count').innerHTML = formatNumber(projectsData.length);
+          
+          // Update stats from direct API once we have some projects
+          if (projectsData.length >= initialStatsProjectCount && !projectsAfterCursor) {
+            await updateWithDirectStats();
+          }
+          
+          if (data.meta.has_next_page) {
+            projectsAfterCursor = data.meta.end_cursor;
+            isLoading = false;
+            
+            // Update the UI with what we have so far
+            sortProjects();
+            
+            // Continue loading more projects
+            setTimeout(() => loadMoreProjects(), 100);
+            return;
+          }
+          
+          // All projects loaded, finalize stats
+          const totalProjects = projectsData.length;
+          document.getElementById('sites-count').innerHTML = formatNumber(totalProjects);
+          
+          // Update project grid
+          sortProjects();
+          projectLoadingEl.style.display = 'none';
+          
+          // Final stats update from API
+          const apiStats = await fetchUserStats();
+          
+          // Combine all user stats
+          const userStats = {
+            username: username,
+            projects: totalProjects,
+            views: apiStats.total_views || 0,
+            likes: apiStats.total_likes || 0,
+            followers: parseInt(document.getElementById('followers-count').innerText.replace(/[^\d]/g, '')) || 0,
+            following: parseInt(document.getElementById('following-count').innerText.replace(/[^\d]/g, '')) || 0,
+            friends: parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0,
+            popularity: parseInt(document.getElementById('popularity-count').innerText) || 0,
+            rating: parseInt(document.getElementById('rating-count').innerText) || 0,
+            unposted: parseInt(document.getElementById('unposted-count').innerText.replace(/[^\d]/g, '')) || 0
+          };
+          
+          // Store stats
+          await storeUserStats(userStats);
+          
+          // Generate bio text if enabled
+          if (enableAutoBio) {
+            const bioText = generateBioText(userStats);
+            document.getElementById('description').innerHTML = bioText;
+          }
+          
+          isLoading = false;
+        } catch (error) {
+          console.error('Error loading projects:', error);
+          document.getElementById('projects-loading').style.display = 'none';
+          document.getElementById('description').innerHTML = 'Error loading project data.';
+          isLoading = false;
+        }
+      }
+
+      /* @tweakable Text to display when a value is loading */
+      const loadingText = '<div class="loading-spinner"></div>';
+      
+      /**
+       * Reset all stat displays to loading state
+       */
+      function resetStatsToLoading() {
+        document.getElementById('views-count').innerHTML = loadingText;
+        document.getElementById('sites-count').innerHTML = loadingText;
+        document.getElementById('likes-count').innerHTML = loadingText;
+        document.getElementById('followers-count').innerHTML = loadingText;
+        document.getElementById('following-count').innerHTML = loadingText;
+        document.getElementById('friends-count').innerHTML = loadingText;
+        document.getElementById('popularity-count').innerHTML = loadingText;
+        document.getElementById('rating-count').innerHTML = loadingText;
+        document.getElementById('unposted-count').innerHTML = loadingText;
+        document.getElementById('joined-count').innerHTML = loadingText;
+        document.getElementById('description').innerHTML = loadingText;
+      }
+      
+      /**
+       * Sort and display projects according to current sort criterion
+       */
+      function sortProjects() {
+        try {
+          const projectsGrid = document.getElementById('projects-grid');
+          projectsGrid.innerHTML = '';
+          
+          let sortedProjects = [...projectsData];
+          switch (currentSort) {
+            case 'views':
+              sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views);
+              break;
+            case 'likes':
+              sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes);
+              break;
+            case 'recent':
+            default:
+              sortedProjects.sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at));
+              break;
+          }
+          
+          sortedProjects.forEach(({ project, project_revision, site }) => {
+            const card = createProjectCard(project, project_revision, site);
+            projectsGrid.appendChild(card);
+          });
+        } catch (error) {
+          console.error('Error sorting projects:', error);
+        }
+      }
+      
+      /**
+       * Initialize the user profile page
+       */
+      async function initProfile() {
+        try {
+          document.querySelector('.username-hint').classList.add('hidden');
+          resetStatsToLoading();
+          
+          const user = await fetchUserProfile();
+          if (!user) {
+            document.getElementById('description').innerHTML = 'Error: User not found.';
+            return;
+          }
+          
+          window.currentUserProfile = user;
+          document.getElementById('username').textContent = user.username;
+          document.getElementById('avatar').src = user.avatar_url || '';
+          document.getElementById('avatar').onerror = function() {
+            this.src = 'https://images.websim.ai/avatar/anonymous';
+          };
+          
+          // Update joined date
+          const joinedEl = document.getElementById('joined-count');
+          joinedEl.className = 'value joined';
+          const joinedDate = new Date(user.created_at);
+          joinedEl.innerHTML = `
+            <div>${getRelativeTimeString(joinedDate)}</div>
+            <div class="ago">ago</div>
+          `;
+          
+          // Get initial counts directly from API
+          const [followingCount, followersCount, stats] = await Promise.all([
+            fetchFollowingCount(),
+            fetchFollowersCount(),
+            fetchUserStats()
+          ]);
+          
+          document.getElementById('following-count').innerHTML = formatNumber(followingCount || 0);
+          document.getElementById('followers-count').innerHTML = formatNumber(followersCount || 0);
+          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
+          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
+          
+          // Reset project data
+          projectsData = [];
+          projectsAfterCursor = null;
+          
+          // Fetch all data concurrently
+          Promise.allSettled([
+            fetchRecentFollower(),
+            loadMoreProjects(),
+            fetchUnpostedProjects().then(unpostedCount => {
+              updateStatWithPercentile('unposted-count', unpostedCount, 'unposted');
+            })
+          ]).then(results => {
+            results.forEach(result => {
+              if (result.status === 'rejected') {
+                console.error('Error during concurrent data loading:', result.reason);
+              }
+            });
+          });
+          
+          // Set up event listeners for sort buttons
+          document.querySelectorAll('.sort-button').forEach(button => {
+            button.addEventListener('click', () => {
+              document.querySelectorAll('.sort-button').forEach(b => b.classList.remove('active'));
+              button.classList.add('active');
+              currentSort = button.dataset.sort;
+              sortProjects();
+            });
+          });
+          
+          // Set up event listeners for view buttons
+          document.querySelectorAll('.view-button').forEach(button => {
+            button.addEventListener('click', async () => {
+              document.querySelectorAll('.view-button').forEach(b => b.classList.remove('active'));
+              button.classList.add('active');
+              
+              document.querySelectorAll('.view-content').forEach(view => {
+                view.style.display = 'none';
+              });
+              
+              const viewType = button.dataset.view;
+              const viewElement = document.getElementById(`${viewType}-view`);
+              viewElement.style.display = 'block';
+              
+              if (viewType === 'followers' && !followersAfterCursor) {
+                await loadMoreFollowers();
+              } else if (viewType === 'following' && !followingAfterCursor) {
+                await loadMoreFollowing();
+              } else if (viewType === 'friends') {
+                await getFriends();
+              }
+            });
+          });
+        } catch (error) {
+          console.error('Error initializing profile:', error);
+          document.getElementById('description').innerHTML = 'Error loading profile data.';
+        }
+      }
+      
+      // ===== UI CREATION FUNCTIONS =====
+      
+      /**
+       * Create a user card element for followers/following/friends views
+       */
+      function createUserCard(user) {
+        if (!user) return document.createElement('div');
+        
+        const card = document.createElement('a');
+        card.href = `https://websim.ai/@${user.username}`;
+        card.className = 'user-card';
+        card.innerHTML = `
+          <img class="user-avatar" src="${user.avatar_url || ''}" 
+               alt="${user.username}'s avatar" 
+               style="width: ${userAvatarSize}px; height: ${userAvatarSize}px;"
+               onerror="this.src='https://images.websim.ai/avatar/anonymous'">
+          <div class="user-name">${user.username}</div>
+        `;
+        
+        card.addEventListener('click', async (e) => {
+          e.preventDefault();
+          
+          // Set username display
+          const usernameEl = document.getElementById('username');
+          usernameEl.textContent = user.username;
+          document.querySelector('.username-hint').classList.add('hidden');
+          
+          // Scroll to top
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          // Reset data
+          projectsData = [];
+          projectsAfterCursor = null;
+          followersAfterCursor = null;
+          followingAfterCursor = null;
+          
+          // Clear all grids
+          document.getElementById('projects-grid').innerHTML = '';
+          document.getElementById('followers-grid').innerHTML = '';
+          document.getElementById('following-grid').innerHTML = '';
+          document.getElementById('friends-grid').innerHTML = '';
+          
+          // Reset stats displays
+          resetStatsToLoading();
+          
+          // Update current username and initialize new profile
+          username = user.username;
+          await initProfile();
+        });
+        
+        return card;
+      }
+      
+      /**
+       * Create a project card element for projects view
+       */
+      function createProjectCard(project, project_revision, site) {
+        if (!project) return document.createElement('div');
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        // Create preview image or placeholder
+        const previewHtml = site
+          ? `<img class="preview-image" 
+                  src="https://images.websim.ai/v1/site/${site.id}/600" 
+                  alt="Preview of ${project.title || 'Untitled Project'}" 
+                  style="height: ${projectPreviewHeight}px;"
+                  loading="lazy"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="preview-image" 
+                  style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: #2a2a2a; color: #666;">
+               No Preview Available
+             </div>`
+          : `<div class="preview-image" 
+                 style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: #2a2a2a; color: #666;">
+                No Preview
+              </div>`;
+        
+        card.innerHTML = `
+          <div class="project-link" style="text-decoration: none; color: inherit; cursor: pointer;">
+            ${previewHtml}
+            <div class="card-content">
+              <h3>${project.title || 'Untitled Project'}</h3>
+              <div class="card-stats">
+                <span>👁️ ${formatNumber(project.stats.views)}</span>
+                <span>❤️ ${formatNumber(project.stats.likes)}</span>
+              </div>
+              <div class="card-meta">
+                ${getRelativeTimeString(new Date(project.created_at))} ago
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Add click handler to open modal
+        const projectLink = card.querySelector('.project-link');
+        projectLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          
+          const modal = document.querySelector('.modal');
+          const overlay = document.querySelector('.modal-overlay');
+          const iframe = modal.querySelector('iframe');
+          const projectUrl = `https://websim.ai/p/${project.id}`;
+          
+          iframe.src = projectUrl;
+          
+          let openNewTab = modal.querySelector('.open-new-tab');
+          if (!openNewTab) {
+            openNewTab = document.createElement('a');
+            openNewTab.className = 'open-new-tab';
+            openNewTab.target = '_blank';
+            openNewTab.textContent = '↗️ Open in new tab';
+            modal.appendChild(openNewTab);
+          }
+          openNewTab.href = projectUrl;
+          
+          overlay.classList.add('active');
+          modal.classList.add('active');
+        });
+        
+        return card;
+      }
+      
+      /**
+       * Generate a bio text based on user stats
+       */
+      /* @tweakable Include additional details in auto-generated bio */
+      const bioIncludeProjectDetails = true;
+
+      /* @tweakable Include social stats in auto-generated bio */
+      const bioIncludeSocialStats = true;
+      
+      function generateBioText(userStats) {
+        if (!userStats || !window.currentUserProfile) {
+          return 'Loading bio...';
+        }
+        
+        const user = window.currentUserProfile;
+        
+        if (!projectsData || projectsData.length === 0) {
+          return `Hello! My name is ${user.username}. I joined websim on ${new Date(user.created_at).toLocaleDateString()}.`;
+        }
+        
+        let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
+        
+        // Project stats
+        const totalViews = userStats.views;
+        const projectsCount = userStats.projects;
+        
+        bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
+        if (totalViews > 0) { 
+          bioText += ` with ${formatNumber(totalViews)} total views`; 
+        }
+        bioText += '. ';
+        
+        if (bioIncludeProjectDetails) {
+          // Sort projects to find latest, most viewed, most liked
+          const sortedByDate = [...projectsData].sort((a, b) => 
+            new Date(b.project.created_at) - new Date(a.project.created_at));
+          
+          const sortedByViews = [...projectsData].sort((a, b) => 
+            b.project.stats.views - a.project.stats.views);
+          
+          const sortedByLikes = [...projectsData].sort((a, b) => 
+            b.project.stats.likes - a.project.stats.likes);
+          
+          // Add latest project info
+          if (sortedByDate.length > 0) {
+            const latestProject = sortedByDate[0].project;
+            bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-blue);">${latestProject.title || 'Untitled'}</a>`;
+            
+            const projectDate = new Date(latestProject.created_at).toLocaleDateString();
+            if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
+              bioText += ` which I made on ${projectDate}`;
+            }
+            bioText += '. ';
+          }
+          
+          // Add most viewed project info
+          if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
+            const mostViewedProject = sortedByViews[0].project;
+            bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-blue);">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
+          }
+          
+          // Add most liked project info
+          if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
+            const mostLikedProject = sortedByLikes[0].project;
+            bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-blue);">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
+          }
+        }
+        
+        // Add social info
+        if (bioIncludeSocialStats) {
+          let socialText = [];
+          if (userStats.following > 0) {
+            socialText.push(`I'm following ${formatNumber(userStats.following)} people`);
+          }
+          
+          if (userStats.followers > 0) {
+            socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
+          }
+          
+          if (socialText.length > 0) {
+            bioText += socialText.join(' and ') + '.';
+          }
+        }
+        
+        return bioText;
+      }
+      
+      // ===== SYNTHWAVE GRID BACKGROUND =====
+      
+      /**
+       * Create and animate the synthwave grid background
+       */
+      function initSynthwaveBackground() {
+        const canvas = document.createElement('canvas');
+        const container = document.getElementById('synthwave-grid');
+        container.innerHTML = '';
+        container.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        let time = 0;
+        
+        function resizeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Star class for background
+        class Star {
+          constructor() {
+            this.reset();
+          }
+          
+          reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * (canvas.height * gridHorizonPosition);
+            this.size = Math.random() * 2 + 1;
+            this.brightness = Math.random();
+            this.flickerRate = Math.random() * starFlickerSpeed;
+            this.flickerDirection = Math.random() > 0.5 ? 1 : -1;
+          }
+          
+          update() {
+            // Flicker effect
+            this.brightness += this.flickerRate * this.flickerDirection;
+            if (this.brightness > 1 || this.brightness < 0.3) {
+              this.flickerDirection *= -1;
+            }
+          }
+          
+          draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.brightness})`;
+            ctx.fill();
+          }
+        }
+        
+        // Create stars
+        const stars = [];
+        if (showStars) {
+          for (let i = 0; i < starCount; i++) {
+            stars.push(new Star());
+          }
+        }
+        
+        function drawGrid() {
+          const horizonY = canvas.height * gridHorizonPosition;
+          
+          // Draw the "sun"
+          if (showSun) {
+            const gradient = ctx.createRadialGradient(
+              canvas.width / 2, horizonY, 0,
+              canvas.width / 2, horizonY, canvas.height * (sunSize / 100)
+            );
+            gradient.addColorStop(0, 'rgba(255, 0, 255, ' + sunGlowIntensity + ')');
+            gradient.addColorStop(0.5, 'rgba(255, 0, 255, ' + (sunGlowIntensity * 0.5) + ')');
+            gradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          
+          // Draw mountains
+          if (showMountains) {
+            ctx.fillStyle = 'rgba(40, 0, 80, 0.8)';
+            ctx.beginPath();
+            ctx.moveTo(0, horizonY);
+            
+            const mountainCount = 5;
+            const mountainWidth = canvas.width / mountainCount;
+            
+            for (let i = 0; i <= mountainCount; i++) {
+              const x = i * mountainWidth + (Math.sin(i + time * 0.1) * 50);
+              const y = horizonY - (Math.random() * canvas.height * (mountainHeight / 100));
+              ctx.lineTo(x, y);
+            }
+            
+            ctx.lineTo(canvas.width, horizonY);
+            ctx.closePath();
+            ctx.fill();
+          }
+          
+          // Horizontal grid lines
+          const gridSpacingY = canvas.height / gridLinesY;
+          for (let i = gridLinesY; i >= 0; i--) {
+            const perspectiveOffset = Math.pow(i / gridLinesY, 2);
+            const y = horizonY + (gridSpacingY * i - horizonY) * perspectiveOffset;
+            
+            const alpha = 1 - (i / gridLinesY) * 0.8;
+            ctx.lineWidth = gridLineThickness;
+            
+            // Alternate colors
+            const gridColor = i % 2 === 0 ? gridColorPrimary : gridColorSecondary;
+            ctx.strokeStyle = `${gridColor}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+          }
+          
+          // Vertical grid lines
+          const gridSpacingX = canvas.width / gridLinesX;
+          for (let i = 0; i < gridLinesX; i++) {
+            const x = i * gridSpacingX;
+            
+            // Create perspective effect
+            ctx.beginPath();
+            ctx.moveTo(x, horizonY);
+            
+            // Draw line with perspective
+            for (let j = 1; j <= 100; j++) {
+              const t = j / 100;
+              const perspectiveX = x + (canvas.width / 2 - x) * t * t * 0.1;
+              const perspectiveY = horizonY + (canvas.height - horizonY) * t;
+              ctx.lineTo(perspectiveX, perspectiveY);
+            }
+            
+            const alpha = 1 - Math.abs((i - gridLinesX / 2) / (gridLinesX / 2)) * 0.5;
+            
+            // Alternate colors
+            const gridColor = i % 2 === 0 ? gridColorPrimary : gridColorSecondary;
+            ctx.strokeStyle = `${gridColor}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+            
+            ctx.stroke();
+          }
+        }
+        
+        function animate() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          // Gradient background
+          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          gradient.addColorStop(0, '#120023');
+          gradient.addColorStop(gridHorizonPosition, '#5b0060');
+          gradient.addColorStop(1, '#00072a');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw stars
+          if (showStars) {
+            stars.forEach(star => {
+              star.update();
+              star.draw();
+            });
+          }
+          
+          // Draw grid
+          drawGrid();
+          
+          // Update time for animation
+          time += gridAnimationSpeed;
+          
+          animationFrame = requestAnimationFrame(animate);
+        }
+        
+        animate();
+      }
+      
+      // Initialize the profile page
+      document.querySelector('.username-hint').classList.remove('hidden');
+      
+      // Setup modal close functionality
+      document.querySelector('.modal-close').addEventListener('click', () => {
+        document.querySelector('.modal').classList.remove('active');
+        document.querySelector('.modal-overlay').classList.remove('active');
+      });
+      
+      document.querySelector('.modal-overlay').addEventListener('click', (e) => {
+        if (e.target === document.querySelector('.modal-overlay')) {
+          document.querySelector('.modal').classList.remove('active');
+          document.querySelector('.modal-overlay').classList.remove('active');
+        }
+      });
+      
+      // Wait for WebsimSocket to initialize
+      room.initialize().then(() => {
+        initProfile();
+        initSynthwaveBackground();
+      });
+      
+      // Clean up animation on page unload
+      window.addEventListener('beforeunload', () => {
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+      });
+    </script>
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
