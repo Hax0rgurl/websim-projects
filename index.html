@@ -639,875 +639,1155 @@
       // Initialize WebsimSocket for persistent data storage
       const room = new WebsimSocket();
       
-      // Config and Tweakable Values
-      /* @tweakable Number of grid lines in the background */
-      const gridLineCount = 20;
-      
-      /* @tweakable Grid horizon position (0.0-1.0, higher values push horizon down) */
-      const gridHorizon = 0.5;
-      
-      /* @tweakable Grid animation speed (pixels per second) */
-      const gridSpeed = 20;
-      
-      /* @tweakable Primary grid color */
-      const gridColorPrimary = "#ff00ff";
-      
-      /* @tweakable Secondary grid color */
-      const gridColorSecondary = "#00eeff";
-      
-      /* @tweakable Grid line width */
-      const gridLineWidth = 2;
-      
-      /* @tweakable Grid line glow intensity */
-      const gridGlowIntensity = 10;
-      
-      /* @tweakable Sun size in pixels */
-      const synthSunSize = 120;
-      
-      /* @tweakable Sun color */
-      const synthSunColor = "#ff00ff";
-      
-      /* @tweakable Base size of user avatar in follower/following lists in pixels */
-      const userAvatarSize = 80;
-      
-      /* @tweakable Height of the project preview image in pixels */
-      const projectPreviewHeight = 200;
-      
-      /* @tweakable Maximum projects to load per batch */
-      const projectBatchSize = 50;
-      
-      /* @tweakable Maximum followers/following to load per batch */
-      const userBatchSize = 50;
-
-      /* @tweakable Format large numbers with commas (true) or use compact notation (false) */
-      const useCommaFormatting = true;
-      
-      /* @tweakable Enable percentile calculations for stats (can slow down page for large datasets) */
-      const enablePercentiles = true;
-      
-      /* @tweakable Number of projects to load before calculating initial stats */
-      const initialStatsProjectCount = 10;
-      
-      /* @tweakable Enable automatically generated bio text */
-      const enableAutoBio = true;
-      
-      /* @tweakable Thresholds for Popularity Score (Views, Likes) */
-      const popularityThresholds = [
-        { score: 10, views: 20000, likes: 325 },
-        { score: 9, views: 10000, likes: 250 },
-        { score: 8, views: 5000, likes: 120 },
-        { score: 7, views: 2500, likes: 75 },
-        { score: 6, views: 1000, likes: 40 },
-        { score: 5, views: 500, likes: 20 },
-        { score: 4, views: 250, likes: 10 },
-        { score: 3, views: 100, likes: 5 },
-        { score: 2, views: 0, likes: 10 },  // Score based only on likes
-        { score: 1, views: 10, likes: 0 }   // Score based only on views
-      ];
-      
-      /* @tweakable Thresholds for Quality Rating (Views per Like, lower is better) */
-      const ratingThresholds = [
-        { score: 1, viewsPerLike: 100 },
-        { score: 2, viewsPerLike: 75 },
-        { score: 3, viewsPerLike: 65 },
-        { score: 4, viewsPerLike: 50 },
-        { score: 5, viewsPerLike: 40 }  // Max score if VPL <= 40 or likes > 0
-      ];
-      
-      /* @tweakable Default username to load on page load */
-      const defaultUsername = 'abandonedmuse';
-      
-      // State variables
-      let username = defaultUsername;
-      let projectsAfterCursor = null;
-      let followersAfterCursor = null;
-      let followingAfterCursor = null;
-      let currentSort = 'recent';
-      let projectsData = [];
-      let isLoading = false;
-      
-      // ===== DATA HANDLING FUNCTIONS =====
+      /**
+       * Configuration Module - Contains all tweakable parameters
+       */
+      const Config = {
+        // Grid Background Settings
+        /** @tweakable Number of grid lines in the background */
+        gridLineCount: 20,
+        /** @tweakable Grid horizon position (0.0-1.0, higher values push horizon down) */
+        gridHorizon: 0.5,
+        /** @tweakable Grid animation speed (pixels per second) */
+        gridSpeed: 20,
+        /** @tweakable Primary grid color */
+        gridColorPrimary: "#ff00ff",
+        /** @tweakable Secondary grid color */
+        gridColorSecondary: "#00eeff",
+        /** @tweakable Grid line width */
+        gridLineWidth: 2,
+        /** @tweakable Grid line glow intensity */
+        gridGlowIntensity: 10,
+        /** @tweakable Sun size in pixels */
+        synthSunSize: 120,
+        /** @tweakable Sun color */
+        synthSunColor: "#ff00ff",
+        
+        // UI Settings
+        /** @tweakable Base size of user avatar in follower/following lists in pixels */
+        userAvatarSize: 80,
+        /** @tweakable Height of the project preview image in pixels */
+        projectPreviewHeight: 200,
+        /** @tweakable Text to display when a value is loading */
+        loadingText: '<div class="loading-spinner"></div>',
+        
+        // Data Settings
+        /** @tweakable Maximum projects to load per batch */
+        projectBatchSize: 50,
+        /** @tweakable Maximum followers/following to load per batch */
+        userBatchSize: 50,
+        /** @tweakable Format large numbers with commas (true) or use compact notation (false) */
+        useCommaFormatting: true,
+        /** @tweakable Maximum number to display before using K/M notation (e.g., 5.2K) */
+        numberFormatThreshold: 10000,
+        /** @tweakable Enable percentile calculations for stats (can slow down page for large datasets) */
+        enablePercentiles: true,
+        /** @tweakable Number of projects to load before calculating initial stats */
+        initialStatsProjectCount: 10,
+        /** @tweakable Enable automatically generated bio text */
+        enableAutoBio: true,
+        /** @tweakable Include additional details in auto-generated bio */
+        bioIncludeProjectDetails: true,
+        /** @tweakable Include social stats in auto-generated bio */
+        bioIncludeSocialStats: true,
+        
+        // Default Settings
+        /** @tweakable Default username to load on page load */
+        defaultUsername: 'abandonedmuse',
+        
+        // Rating Thresholds
+        /** @tweakable Thresholds for Popularity Score (Views, Likes) */
+        popularityThresholds: [
+          { score: 10, views: 20000, likes: 325 },
+          { score: 9, views: 10000, likes: 250 },
+          { score: 8, views: 5000, likes: 120 },
+          { score: 7, views: 2500, likes: 75 },
+          { score: 6, views: 1000, likes: 40 },
+          { score: 5, views: 500, likes: 20 },
+          { score: 4, views: 250, likes: 10 },
+          { score: 3, views: 100, likes: 5 },
+          { score: 2, views: 0, likes: 10 },  // Score based only on likes
+          { score: 1, views: 10, likes: 0 }   // Score based only on views
+        ],
+        
+        /** @tweakable Thresholds for Quality Rating (Views per Like, lower is better) */
+        ratingThresholds: [
+          { score: 1, viewsPerLike: 100 },
+          { score: 2, viewsPerLike: 75 },
+          { score: 3, viewsPerLike: 65 },
+          { score: 4, viewsPerLike: 50 },
+          { score: 5, viewsPerLike: 40 }  // Max score if VPL <= 40 or likes > 0
+        ]
+      };
       
       /**
-       * Format numbers according to settings
+       * AppState Module - Manages application state
        */
-      /* @tweakable Maximum number to display before using K/M notation (e.g., 5.2K) */
-      const numberFormatThreshold = 10000;
-      
-      function formatNumber(num) {
-        if (num === undefined || num === null) return '0';
+      const AppState = {
+        username: Config.defaultUsername,
+        projectsAfterCursor: null,
+        followersAfterCursor: null,
+        followingAfterCursor: null,
+        currentSort: 'recent',
+        projectsData: [],
+        isLoading: false,
+        currentUserProfile: null,
         
-        if (useCommaFormatting || num < numberFormatThreshold) {
-          return num.toLocaleString();
-        } else {
-          if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-          } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
+        reset() {
+          this.projectsData = [];
+          this.projectsAfterCursor = null;
+          this.followersAfterCursor = null;
+          this.followingAfterCursor = null;
+          this.isLoading = false;
+        },
+        
+        setUsername(username) {
+          this.username = username;
+        }
+      };
+      
+      /**
+       * Utils Module - Utility functions
+       */
+      const Utils = {
+        /**
+         * Format numbers according to settings
+         */
+        formatNumber(num) {
+          if (num === undefined || num === null) return '0';
+          
+          if (Config.useCommaFormatting || num < Config.numberFormatThreshold) {
+            return num.toLocaleString();
           } else {
-            return num.toString();
+            if (num >= 1000000) {
+              return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+              return (num / 1000).toFixed(1) + 'K';
+            } else {
+              return num.toString();
+            }
           }
-        }
-      }
-      
-      /**
-       * Store user statistics in WebsimSocket persistent storage
-       */
-      async function storeUserStats(stats) {
-        try {
-          await room.collection('user_stats').create({
-            username: stats.username,
-            stats: stats,
-            timestamp: new Date().toISOString()
-          });
-        } catch (error) {
-          console.error('Error storing user stats:', error);
-        }
-      }
-      
-      /**
-       * Calculate percentile of a value compared to stored stats
-       */
-      async function calculatePercentile(value, statName) {
-        if (!enablePercentiles) return null;
+        },
         
-        try {
-          const records = room.collection('user_stats').getList();
-          if (!records || records.length === 0) return null;
-          
-          const values = records
-            .filter(r => r.stats && r.stats[statName] !== undefined && r.stats[statName] !== null)
-            .map(r => r.stats[statName]);
-          
-          if (values.length === 0) return null;
-          
-          values.sort((a, b) => b - a);
-          const position = values.findIndex(v => v <= value) + 1;
-          return Math.round((1 - (position / values.length)) * 100);
-        } catch (error) {
-          console.error('Error calculating percentile:', error);
-          return null;
-        }
-      }
-      
-      /**
-       * Update a stat element with value and percentile information
-       */
-      async function updateStatWithPercentile(elementId, value, statName) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        
-        if (isNaN(value) || value === undefined || value === null) {
-          element.innerHTML = '0';
-          return;
-        }
-        
-        try {
-          const percentile = await calculatePercentile(value, statName);
-          let suffix = "";
-          
-          if (statName === 'popularity') {
-            suffix = "/10";
-          } else if (statName === 'rating') {
-            suffix = "/5";
+        /**
+         * Format relative time (e.g., "2d" for 2 days ago)
+         */
+        getRelativeTimeString(date) {
+          if (!(date instanceof Date)) {
+            date = new Date(date);
           }
           
-          if (percentile === null || isNaN(percentile)) {
-            element.innerHTML = `${formatNumber(value)}${suffix}`;
-          } else {
-            element.innerHTML = `
-              ${formatNumber(value)}${suffix}
-              <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
-                Top ${percentile}%
-              </div>
+          if (isNaN(date.getTime())) {
+            return 'Invalid date';
+          }
+          
+          const now = new Date();
+          const diffMs = now - date;
+          const diffSecs = Math.floor(diffMs / 1000);
+          const diffMins = Math.floor(diffSecs / 60);
+          const diffHours = Math.floor(diffMins / 60);
+          const diffDays = Math.floor(diffHours / 24);
+          const diffMonths = Math.floor(diffDays / 30);
+          const diffYears = Math.floor(diffDays / 365);
+          
+          if (diffYears > 0) return `${diffYears}y`;
+          if (diffMonths > 0) return `${diffMonths}mo`;
+          if (diffDays > 0) return `${diffDays}d`;
+          if (diffHours > 0) return `${diffHours}h`;
+          if (diffMins > 0) return `${diffMins}m`;
+          return `${diffSecs}s`;
+        },
+        
+        /**
+         * Generate a bio text based on user stats
+         */
+        generateBioText(userStats) {
+          if (!userStats || !AppState.currentUserProfile) {
+            return 'Loading bio...';
+          }
+          
+          const user = AppState.currentUserProfile;
+          
+          if (!AppState.projectsData || AppState.projectsData.length === 0) {
+            return `Hello! My name is ${user.username}. I joined websim on ${new Date(user.created_at).toLocaleDateString()}.`;
+          }
+          
+          let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
+          
+          // Project stats
+          const totalViews = userStats.views;
+          const projectsCount = userStats.projects;
+          
+          bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
+          if (totalViews > 0) { 
+            bioText += ` with ${this.formatNumber(totalViews)} total views`; 
+          }
+          bioText += '. ';
+          
+          if (Config.bioIncludeProjectDetails) {
+            // Sort projects to find latest, most viewed, most liked
+            const sortedByDate = [...AppState.projectsData].sort((a, b) => 
+              new Date(b.project.created_at) - new Date(a.project.created_at));
+            
+            const sortedByViews = [...AppState.projectsData].sort((a, b) => 
+              b.project.stats.views - a.project.stats.views);
+            
+            const sortedByLikes = [...AppState.projectsData].sort((a, b) => 
+              b.project.stats.likes - a.project.stats.likes);
+            
+            // Add latest project info
+            if (sortedByDate.length > 0) {
+              const latestProject = sortedByDate[0].project;
+              bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>`;
+              
+              const projectDate = new Date(latestProject.created_at).toLocaleDateString();
+              if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
+                bioText += ` which I made on ${projectDate}`;
+              }
+              bioText += '. ';
+            }
+            
+            // Add most viewed project info
+            if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
+              const mostViewedProject = sortedByViews[0].project;
+              bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> with ${this.formatNumber(mostViewedProject.stats.views)} views. `;
+            }
+            
+            // Add most liked project info
+            if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
+              const mostLikedProject = sortedByLikes[0].project;
+              bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> with ${this.formatNumber(mostLikedProject.stats.likes)} likes. `;
+            }
+          }
+          
+          // Add social info
+          if (Config.bioIncludeSocialStats) {
+            let socialText = [];
+            if (userStats.following > 0) {
+              socialText.push(`I'm following ${this.formatNumber(userStats.following)} people`);
+            }
+            
+            if (userStats.followers > 0) {
+              socialText.push(`${this.formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
+            }
+            
+            if (socialText.length > 0) {
+              bioText += socialText.join(' and ') + '.';
+            }
+          }
+          
+          return bioText;
+        }
+      };
+      
+      /**
+       * StatsService - Manages user statistics
+       */
+      const StatsService = {
+        /**
+         * Store user statistics in WebsimSocket persistent storage
+         */
+        async storeUserStats(stats) {
+          try {
+            await room.collection('user_stats').create({
+              username: stats.username,
+              stats: stats,
+              timestamp: new Date().toISOString()
+            });
+          } catch (error) {
+            console.error('Error storing user stats:', error);
+          }
+        },
+        
+        /**
+         * Calculate percentile of a value compared to stored stats
+         */
+        async calculatePercentile(value, statName) {
+          if (!Config.enablePercentiles) return null;
+          
+          try {
+            const records = room.collection('user_stats').getList();
+            if (!records || records.length === 0) return null;
+            
+            const values = records
+              .filter(r => r.stats && r.stats[statName] !== undefined && r.stats[statName] !== null)
+              .map(r => r.stats[statName]);
+            
+            if (values.length === 0) return null;
+            
+            values.sort((a, b) => b - a);
+            const position = values.findIndex(v => v <= value) + 1;
+            return Math.round((1 - (position / values.length)) * 100);
+          } catch (error) {
+            console.error('Error calculating percentile:', error);
+            return null;
+          }
+        },
+        
+        /**
+         * Update a stat element with value and percentile information
+         */
+        async updateStatWithPercentile(elementId, value, statName) {
+          const element = document.getElementById(elementId);
+          if (!element) return;
+          
+          if (isNaN(value) || value === undefined || value === null) {
+            element.innerHTML = '0';
+            return;
+          }
+          
+          try {
+            const percentile = await this.calculatePercentile(value, statName);
+            let suffix = "";
+            
+            if (statName === 'popularity') {
+              suffix = "/10";
+            } else if (statName === 'rating') {
+              suffix = "/5";
+            }
+            
+            if (percentile === null || isNaN(percentile)) {
+              element.innerHTML = `${Utils.formatNumber(value)}${suffix}`;
+            } else {
+              element.innerHTML = `
+                ${Utils.formatNumber(value)}${suffix}
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
+                  Top ${percentile}%
+                </div>
+              `;
+            }
+          } catch (error) {
+            console.error(`Error updating stat ${elementId}:`, error);
+            element.innerHTML = `${Utils.formatNumber(value) || '0'}`;
+          }
+        }
+      };
+      
+      /**
+       * ApiService - Handle all API calls
+       */
+      const ApiService = {
+        /**
+         * Fetch a user's profile information
+         */
+        async fetchUserProfile() {
+          try {
+            const response = await fetch(`/api/v1/users/${AppState.username}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch user: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.user;
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            return null;
+          }
+        },
+        
+        /**
+         * Fetch count of users the profile is following
+         */
+        async fetchFollowingCount() {
+          try {
+            const response = await fetch(`/api/v1/users/${AppState.username}/following?count=true`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch following count: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.following.meta.count || 0;
+          } catch (error) {
+            console.error('Error fetching following count:', error);
+            return 0;
+          }
+        },
+        
+        /**
+         * Fetch count of users following the profile
+         */
+        async fetchFollowersCount() {
+          try {
+            const response = await fetch(`/api/v1/users/${AppState.username}/followers?count=true`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch followers count: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.followers.meta.count || 0;
+          } catch (error) {
+            console.error('Error fetching followers count:', error);
+            return 0;
+          }
+        },
+        
+        /**
+         * Fetch a user's projects with pagination
+         */
+        async fetchProjects(afterCursor = null) {
+          try {
+            const params = new URLSearchParams();
+            if (afterCursor) params.append('after', afterCursor);
+            params.append('first', Config.projectBatchSize.toString());
+            params.append('posted', 'true');
+            params.append('sort_by', 'updated_at');
+            
+            const response = await fetch(`/api/v1/users/${AppState.username}/projects?${params}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch projects: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return {
+              data: data.projects.data.map(item => ({
+                project: item.project,
+                project_revision: item.project_revision,
+                site: item.site,
+                cursor: item.cursor
+              })),
+              meta: data.projects.meta
+            };
+          } catch (error) {
+            console.error('Error fetching projects:', error);
+            return { data: [], meta: { has_next_page: false } };
+          }
+        },
+        
+        /**
+         * Fetch a user's stats 
+         */
+        async fetchUserStats() {
+          try {
+            const response = await fetch(`/api/v1/users/${AppState.username}/stats`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch user stats: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.stats;
+          } catch (error) {
+            console.error('Error fetching user stats:', error);
+            return { total_views: 0, total_likes: 0 };
+          }
+        },
+        
+        /**
+         * Fetch a list of followers with pagination
+         */
+        async fetchFollowers(afterCursor = null) {
+          try {
+            const params = new URLSearchParams();
+            if (afterCursor) params.append('after', afterCursor);
+            params.append('first', Config.userBatchSize.toString());
+            
+            const response = await fetch(`/api/v1/users/${AppState.username}/followers?${params}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch followers: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return {
+              data: data.followers.data.map(item => ({
+                user: item.follow.user,
+                cursor: item.cursor
+              })),
+              meta: data.followers.meta
+            };
+          } catch (error) {
+            console.error('Error fetching followers:', error);
+            return { data: [], meta: { has_next_page: false } };
+          }
+        },
+        
+        /**
+         * Fetch a list of users the profile is following with pagination
+         */
+        async fetchFollowing(afterCursor = null) {
+          try {
+            const params = new URLSearchParams();
+            if (afterCursor) params.append('after', afterCursor);
+            params.append('first', Config.userBatchSize.toString());
+            
+            const response = await fetch(`/api/v1/users/${AppState.username}/following?${params}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch following: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return {
+              data: data.following.data.map(item => ({
+                user: item.follow.user,
+                cursor: item.cursor
+              })),
+              meta: data.following.meta
+            };
+          } catch (error) {
+            console.error('Error fetching following:', error);
+            return { data: [], meta: { has_next_page: false } };
+          }
+        },
+        
+        /**
+         * Fetch the most recent follower
+         */
+        async fetchRecentFollower() {
+          try {
+            const response = await fetch(`/api/v1/users/${AppState.username}/followers?first=1`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch recent follower: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const recentFollowerEl = document.getElementById('recent-follower');
+            
+            // Clear previous loading state or follower info
+            recentFollowerEl.innerHTML = ''; 
+            
+            if (!data || !data.followers || !data.followers.data || data.followers.data.length === 0) {
+               recentFollowerEl.innerHTML = `<div>No followers yet!</div>`;
+               recentFollowerEl.style.cursor = 'default';
+               return null;
+            }
+            
+            const follower = data.followers.data[0].follow.user;
+            if (!follower) {
+                recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
+                recentFollowerEl.style.cursor = 'default';
+                return null;
+            }
+            
+            recentFollowerEl.innerHTML = `
+              <img class="recent-follower-avatar" src="${follower.avatar_url || ''}" alt="Recent follower avatar" onerror="this.src='https://images.websim.ai/avatar/anonymous'">
+              <div class="recent-follower-name">${follower.username}</div>
             `;
-          }
-        } catch (error) {
-          console.error(`Error updating stat ${elementId}:`, error);
-          element.innerHTML = `${formatNumber(value) || '0'}`;
-        }
-      }
-      
-      /**
-       * Format relative time (e.g., "2d" for 2 days ago)
-       */
-      function getRelativeTimeString(date) {
-        if (!(date instanceof Date)) {
-          date = new Date(date);
-        }
-        
-        if (isNaN(date.getTime())) {
-          return 'Invalid date';
-        }
-        
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSecs = Math.floor(diffMs / 1000);
-        const diffMins = Math.floor(diffSecs / 60);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-        const diffMonths = Math.floor(diffDays / 30);
-        const diffYears = Math.floor(diffDays / 365);
-        
-        if (diffYears > 0) return `${diffYears}y`;
-        if (diffMonths > 0) return `${diffMonths}mo`;
-        if (diffDays > 0) return `${diffDays}d`;
-        if (diffHours > 0) return `${diffHours}h`;
-        if (diffMins > 0) return `${diffMins}m`;
-        return `${diffSecs}s`;
-      }
-      
-      // ===== API FUNCTIONS =====
-      
-      /**
-       * Fetch a user's profile information
-       */
-      async function fetchUserProfile() {
-        try {
-          const response = await fetch(`/api/v1/users/${username}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user: ${response.status}`);
-          }
-          const data = await response.json();
-          return data.user;
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          return null;
-        }
-      }
-      
-      /**
-       * Fetch count of users the profile is following
-       */
-      async function fetchFollowingCount() {
-        try {
-          const response = await fetch(`/api/v1/users/${username}/following?count=true`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch following count: ${response.status}`);
-          }
-          const data = await response.json();
-          return data.following.meta.count || 0;
-        } catch (error) {
-          console.error('Error fetching following count:', error);
-          return 0;
-        }
-      }
-      
-      /**
-       * Fetch count of users following the profile
-       */
-      async function fetchFollowersCount() {
-        try {
-          const response = await fetch(`/api/v1/users/${username}/followers?count=true`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch followers count: ${response.status}`);
-          }
-          const data = await response.json();
-          return data.followers.meta.count || 0;
-        } catch (error) {
-          console.error('Error fetching followers count:', error);
-          return 0;
-        }
-      }
-      
-      /**
-       * Fetch a user's projects with pagination
-       */
-      async function fetchProjects(afterCursor = null) {
-        try {
-          const params = new URLSearchParams();
-          if (afterCursor) params.append('after', afterCursor);
-          params.append('first', projectBatchSize.toString());
-          params.append('posted', 'true');
-          params.append('sort_by', 'updated_at');
-          
-          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch projects: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          return {
-            data: data.projects.data.map(item => ({
-              project: item.project,
-              project_revision: item.project_revision,
-              site: item.site,
-              cursor: item.cursor
-            })),
-            meta: data.projects.meta
-          };
-        } catch (error) {
-          console.error('Error fetching projects:', error);
-          return { data: [], meta: { has_next_page: false } };
-        }
-      }
-      
-      /**
-       * Fetch a user's stats 
-       */
-      async function fetchUserStats() {
-        try {
-          const response = await fetch(`/api/v1/users/${username}/stats`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user stats: ${response.status}`);
-          }
-          const data = await response.json();
-          return data.stats;
-        } catch (error) {
-          console.error('Error fetching user stats:', error);
-          return { total_views: 0, total_likes: 0 };
-        }
-      }
-      
-      /**
-       * Fetch a list of followers with pagination
-       */
-      async function fetchFollowers(afterCursor = null) {
-        try {
-          const params = new URLSearchParams();
-          if (afterCursor) params.append('after', afterCursor);
-          params.append('first', userBatchSize.toString());
-          
-          const response = await fetch(`/api/v1/users/${username}/followers?${params}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch followers: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          return {
-            data: data.followers.data.map(item => ({
-              user: item.follow.user,
-              cursor: item.cursor
-            })),
-            meta: data.followers.meta
-          };
-        } catch (error) {
-          console.error('Error fetching followers:', error);
-          return { data: [], meta: { has_next_page: false } };
-        }
-      }
-      
-      /**
-       * Fetch a list of users the profile is following with pagination
-       */
-      async function fetchFollowing(afterCursor = null) {
-        try {
-          const params = new URLSearchParams();
-          if (afterCursor) params.append('after', afterCursor);
-          params.append('first', userBatchSize.toString());
-          
-          const response = await fetch(`/api/v1/users/${username}/following?${params}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch following: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          return {
-            data: data.following.data.map(item => ({
-              user: item.follow.user,
-              cursor: item.cursor
-            })),
-            meta: data.following.meta
-          };
-        } catch (error) {
-          console.error('Error fetching following:', error);
-          return { data: [], meta: { has_next_page: false } };
-        }
-      }
-      
-      /**
-       * Fetch the most recent follower
-       */
-      async function fetchRecentFollower() {
-        try {
-          const response = await fetch(`/api/v1/users/${username}/followers?first=1`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch recent follower: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          const recentFollowerEl = document.getElementById('recent-follower');
-          
-          // Clear previous loading state or follower info
-          recentFollowerEl.innerHTML = ''; 
-          
-          if (!data || !data.followers || !data.followers.data || data.followers.data.length === 0) {
-             recentFollowerEl.innerHTML = `<div>No followers yet!</div>`;
-             recentFollowerEl.style.cursor = 'default';
-             return null;
-          }
-          
-          const follower = data.followers.data[0].follow.user;
-          if (!follower) {
-              recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
-              recentFollowerEl.style.cursor = 'default';
-              return null;
-          }
-          
-          recentFollowerEl.innerHTML = `
-            <img class="recent-follower-avatar" src="${follower.avatar_url || ''}" alt="Recent follower avatar" onerror="this.src='https://images.websim.ai/avatar/anonymous'">
-            <div class="recent-follower-name">${follower.username}</div>
-          `;
-          recentFollowerEl.style.cursor = 'pointer';
-          
-          // Add click handler to visit follower's profile
-          recentFollowerEl.onclick = () => {
-            window.location.href = `https://websim.ai/@${follower.username}`;
-          };
-          
-          return follower;
-        } catch (error) {
-          console.error('Error fetching recent follower:', error);
-          const recentFollowerEl = document.getElementById('recent-follower');
-          recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
-          return null;
-        }
-      }
-      
-      /**
-       * Find the intersection of followers and following (friends)
-       */
-      async function getFriends() {
-        try {
-          const friendsGrid = document.getElementById('friends-grid');
-          friendsGrid.innerHTML = '';
-          
-          const friendsLoading = document.getElementById('friends-loading');
-          friendsLoading.style.display = 'block';
-          
-          // Initialize objects to store all followers and following
-          let allFollowers = {};
-          let allFollowing = {};
-          
-          // Fetch all followers
-          let followersAfter = null;
-          let hasMoreFollowers = true;
-          
-          while (hasMoreFollowers) {
-            const followers = await fetchFollowers(followersAfter);
-            followers.data.forEach(item => {
-              allFollowers[item.user.id] = item.user;
-            });
+            recentFollowerEl.style.cursor = 'pointer';
             
-            hasMoreFollowers = followers.meta.has_next_page;
-            followersAfter = followers.meta.end_cursor;
-          }
-          
-          // Fetch all following
-          let followingAfter = null;
-          let hasMoreFollowing = true;
-          
-          while (hasMoreFollowing) {
-            const following = await fetchFollowing(followingAfter);
-            following.data.forEach(item => {
-              allFollowing[item.user.id] = item.user;
-            });
-            
-            hasMoreFollowing = following.meta.has_next_page;
-            followingAfter = following.meta.end_cursor;
-          }
-          
-          // Find intersection (friends)
-          let friends = [];
-          Object.keys(allFollowers).forEach(userId => {
-            if (allFollowing[userId]) {
-              friends.push(allFollowers[userId]);
-            }
-          });
-          
-          // Update friends count
-          document.getElementById('friends-count').innerHTML = formatNumber(friends.length);
-          
-          // Generate UI
-          friendsLoading.style.display = 'none';
-          
-          if (friends.length === 0) {
-            friendsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No mutual connections yet!</div>`;
-            return;
-          }
-          
-          friends.forEach(user => {
-            const card = createUserCard(user);
-            friendsGrid.appendChild(card);
-          });
-        } catch (error) {
-          console.error('Error loading friends:', error);
-          document.getElementById('friends-loading').style.display = 'none';
-          document.getElementById('friends-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading friends data</div>`;
-        }
-      }
-      
-      /**
-       * Fetch count of unposted projects
-       */
-      async function fetchUnpostedProjects() {
-        try {
-          const params = new URLSearchParams();
-          params.append('first', '100');
-          params.append('posted', 'false');
-          
-          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch unposted projects: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          let totalCount = data.projects.data.length;
-          let hasNextPage = data.projects.meta.has_next_page;
-          let nextCursor = data.projects.meta.end_cursor;
-          
-          // Continue fetching if there are more pages
-          while (hasNextPage) {
-            params.set('after', nextCursor);
-            const nextResponse = await fetch(`/api/v1/users/${username}/projects?${params}`);
-            
-            if (!nextResponse.ok) {
-              console.error('Error fetching more unposted projects');
-              break;
-            }
-            
-            const nextData = await nextResponse.json();
-            totalCount += nextData.projects.data.length;
-            hasNextPage = nextData.projects.meta.has_next_page;
-            nextCursor = nextData.projects.meta.end_cursor;
-          }
-          
-          return totalCount;
-        } catch (error) {
-          console.error('Error fetching unposted projects:', error);
-          return 0;
-        }
-      }
-      
-      // ===== UI DATA LOADING FUNCTIONS =====
-      
-      /**
-       * Update stats with direct API data
-       */
-      async function updateWithDirectStats() {
-        try {
-          // Fetch direct stats from API
-          const stats = await fetchUserStats();
-          
-          // Update views and likes directly from API
-          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
-          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
-          
-          // Calculate popularity and rating based on these direct values
-          let popularityScore = 0;
-          for (const threshold of popularityThresholds) {
-            if ((stats.total_views || 0) >= threshold.views && (stats.total_likes || 0) >= threshold.likes) {
-              popularityScore = threshold.score;
-              break;
-            }
-          }
-          
-          // Calculate quality rating
-          let rating = 0;
-          if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
-            const viewsPerLike = stats.total_views / stats.total_likes;
-            rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
-          } else if ((stats.total_likes || 0) > 0) {
-            rating = 5; // Max rating if likes but no views
-          }
-          
-          // Update the stats display
-          await updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
-          await updateStatWithPercentile('rating-count', rating, 'rating');
-          
-          return stats;
-        } catch (error) {
-          console.error('Error updating direct stats:', error);
-        }
-      }
-      
-      /**
-       * Load and display followers
-       */
-      async function loadMoreFollowers() {
-        try {
-          const followersGrid = document.getElementById('followers-grid');
-          const followersLoading = document.getElementById('followers-loading');
-          
-          followersLoading.style.display = 'block';
-          
-          const data = await fetchFollowers(followersAfterCursor);
-          
-          followersLoading.style.display = 'none';
-          
-          if (data.data.length === 0) {
-            if (followersGrid.children.length === 0) {
-              followersGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No followers yet!</div>`;
-            }
-            return;
-          }
-          
-          data.data.forEach(item => {
-            const card = createUserCard(item.user);
-            followersGrid.appendChild(card);
-          });
-          
-          if (data.meta.has_next_page) {
-            followersAfterCursor = data.meta.end_cursor;
-            // Load more when scrolled to bottom
-            const scrollHandler = () => {
-              if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                window.removeEventListener('scroll', scrollHandler);
-                loadMoreFollowers();
-              }
+            // Add click handler to visit follower's profile
+            recentFollowerEl.onclick = () => {
+              window.location.href = `https://websim.ai/@${follower.username}`;
             };
-            window.addEventListener('scroll', scrollHandler);
+            
+            return follower;
+          } catch (error) {
+            console.error('Error fetching recent follower:', error);
+            const recentFollowerEl = document.getElementById('recent-follower');
+            recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
+            return null;
           }
-        } catch (error) {
-          console.error('Error loading followers:', error);
-          document.getElementById('followers-loading').style.display = 'none';
-        }
-      }
-      
-      /**
-       * Load and display following
-       */
-      async function loadMoreFollowing() {
-        try {
-          const followingGrid = document.getElementById('following-grid');
-          const followingLoading = document.getElementById('following-loading');
-          
-          followingLoading.style.display = 'block';
-          
-          const data = await fetchFollowing(followingAfterCursor);
-          
-          followingLoading.style.display = 'none';
-          
-          if (data.data.length === 0) {
-            if (followingGrid.children.length === 0) {
-              followingGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Not following anyone yet!</div>`;
+        },
+        
+        /**
+         * Fetch count of unposted projects
+         */
+        async fetchUnpostedProjects() {
+          try {
+            const params = new URLSearchParams();
+            params.append('first', '100');
+            params.append('posted', 'false');
+            
+            const response = await fetch(`/api/v1/users/${AppState.username}/projects?${params}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch unposted projects: ${response.status}`);
             }
-            return;
-          }
-          
-          data.data.forEach(item => {
-            const card = createUserCard(item.user);
-            followingGrid.appendChild(card);
-          });
-          
-          if (data.meta.has_next_page) {
-            followingAfterCursor = data.meta.end_cursor;
-            // Load more when scrolled to bottom
-            const scrollHandler = () => {
-              if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                window.removeEventListener('scroll', scrollHandler);
-                loadMoreFollowing();
+            
+            const data = await response.json();
+            let totalCount = data.projects.data.length;
+            let hasNextPage = data.projects.meta.has_next_page;
+            let nextCursor = data.projects.meta.end_cursor;
+            
+            // Continue fetching if there are more pages
+            while (hasNextPage) {
+              params.set('after', nextCursor);
+              const nextResponse = await fetch(`/api/v1/users/${AppState.username}/projects?${params}`);
+              
+              if (!nextResponse.ok) {
+                console.error('Error fetching more unposted projects');
+                break;
               }
-            };
-            window.addEventListener('scroll', scrollHandler);
-          }
-        } catch (error) {
-          console.error('Error loading following:', error);
-          document.getElementById('following-loading').style.display = 'none';
-        }
-      }
-      
-      /**
-       * Load and process all projects for a user
-       */
-      async function loadMoreProjects() {
-        try {
-          if (isLoading) return;
-          isLoading = true;
-          
-          const projectLoadingEl = document.getElementById('projects-loading');
-          const loadMoreBtn = document.getElementById('load-more-projects');
-          
-          projectLoadingEl.style.display = 'block';
-          loadMoreBtn.style.display = 'none';
-          
-          const data = await fetchProjects(projectsAfterCursor);
-          projectsData = projectsData.concat(data.data);
-          
-          // Update projects count immediately
-          document.getElementById('sites-count').innerHTML = formatNumber(projectsData.length);
-          
-          // Update stats from direct API once we have some projects
-          if (projectsData.length >= initialStatsProjectCount && !projectsAfterCursor) {
-            await updateWithDirectStats();
-          }
-          
-          if (data.meta.has_next_page) {
-            projectsAfterCursor = data.meta.end_cursor;
-            isLoading = false;
+              
+              const nextData = await nextResponse.json();
+              totalCount += nextData.projects.data.length;
+              hasNextPage = nextData.projects.meta.has_next_page;
+              nextCursor = nextData.projects.meta.end_cursor;
+            }
             
-            // Update the UI with what we have so far
-            sortProjects();
-            
-            // Continue loading more projects
-            setTimeout(() => loadMoreProjects(), 100);
-            return;
+            return totalCount;
+          } catch (error) {
+            console.error('Error fetching unposted projects:', error);
+            return 0;
           }
-          
-          // All projects loaded, finalize stats
-          const totalProjects = projectsData.length;
-          document.getElementById('sites-count').innerHTML = formatNumber(totalProjects);
-          
-          // Update project grid
-          sortProjects();
-          projectLoadingEl.style.display = 'none';
-          
-          // Final stats update from API
-          const apiStats = await fetchUserStats();
-          
-          // Combine all user stats
-          const userStats = {
-            username: username,
-            projects: totalProjects,
-            views: apiStats.total_views || 0,
-            likes: apiStats.total_likes || 0,
-            followers: parseInt(document.getElementById('followers-count').innerText.replace(/[^\d]/g, '')) || 0,
-            following: parseInt(document.getElementById('following-count').innerText.replace(/[^\d]/g, '')) || 0,
-            friends: parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0,
-            popularity: parseInt(document.getElementById('popularity-count').innerText) || 0,
-            rating: parseInt(document.getElementById('rating-count').innerText) || 0,
-            unposted: parseInt(document.getElementById('unposted-count').innerText.replace(/[^\d]/g, '')) || 0
-          };
-          
-          // Store stats
-          await storeUserStats(userStats);
-          
-          // Generate bio text if enabled
-          if (enableAutoBio) {
-            const bioText = generateBioText(userStats);
-            document.getElementById('description').innerHTML = bioText;
-          }
-          
-          isLoading = false;
-        } catch (error) {
-          console.error('Error loading projects:', error);
-          document.getElementById('projects-loading').style.display = 'none';
-          document.getElementById('description').innerHTML = 'Error loading project data.';
-          isLoading = false;
         }
-      }
-
-      /* @tweakable Text to display when a value is loading */
-      const loadingText = '<div class="loading-spinner"></div>';
+      };
       
       /**
-       * Reset all stat displays to loading state
+       * UIService - Handle UI updates
        */
-      function resetStatsToLoading() {
-        document.getElementById('views-count').innerHTML = loadingText;
-        document.getElementById('sites-count').innerHTML = loadingText;
-        document.getElementById('likes-count').innerHTML = loadingText;
-        document.getElementById('followers-count').innerHTML = loadingText;
-        document.getElementById('following-count').innerHTML = loadingText;
-        document.getElementById('friends-count').innerHTML = loadingText;
-        document.getElementById('popularity-count').innerHTML = loadingText;
-        document.getElementById('rating-count').innerHTML = loadingText;
-        document.getElementById('unposted-count').innerHTML = loadingText;
-        document.getElementById('joined-count').innerHTML = loadingText;
-        document.getElementById('description').innerHTML = loadingText;
-      }
-      
-      /**
-       * Sort and display projects according to current sort criterion
-       */
-      function sortProjects() {
-        try {
-          const projectsGrid = document.getElementById('projects-grid');
-          projectsGrid.innerHTML = '';
+      const UIService = {
+        /**
+         * Reset all stat displays to loading state
+         */
+        resetStatsToLoading() {
+          document.getElementById('views-count').innerHTML = Config.loadingText;
+          document.getElementById('sites-count').innerHTML = Config.loadingText;
+          document.getElementById('likes-count').innerHTML = Config.loadingText;
+          document.getElementById('followers-count').innerHTML = Config.loadingText;
+          document.getElementById('following-count').innerHTML = Config.loadingText;
+          document.getElementById('friends-count').innerHTML = Config.loadingText;
+          document.getElementById('popularity-count').innerHTML = Config.loadingText;
+          document.getElementById('rating-count').innerHTML = Config.loadingText;
+          document.getElementById('unposted-count').innerHTML = Config.loadingText;
+          document.getElementById('joined-count').innerHTML = Config.loadingText;
+          document.getElementById('description').innerHTML = Config.loadingText;
+        },
+        
+        /**
+         * Create a user card element for followers/following/friends views
+         */
+        createUserCard(user) {
+          if (!user) return document.createElement('div');
           
-          let sortedProjects = [...projectsData];
-          switch (currentSort) {
-            case 'views':
-              sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views);
-              break;
-            case 'likes':
-              sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes);
-              break;
-            case 'recent':
-            default:
-              sortedProjects.sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at));
-              break;
-          }
-          
-          sortedProjects.forEach(({ project, project_revision, site }) => {
-            const card = createProjectCard(project, project_revision, site);
-            projectsGrid.appendChild(card);
-          });
-        } catch (error) {
-          console.error('Error sorting projects:', error);
-        }
-      }
-      
-      /**
-       * Initialize the user profile page
-       */
-      async function initProfile() {
-        try {
-          document.querySelector('.username-hint').classList.add('hidden');
-          resetStatsToLoading();
-          
-          const user = await fetchUserProfile();
-          if (!user) {
-            document.getElementById('description').innerHTML = 'Error: User not found.';
-            return;
-          }
-          
-          window.currentUserProfile = user;
-          document.getElementById('username').textContent = user.username;
-          document.getElementById('avatar').src = user.avatar_url || '';
-          document.getElementById('avatar').onerror = function() {
-            this.src = 'https://images.websim.ai/avatar/anonymous';
-          };
-          
-          initSynthwaveBackground();
-          
-          // Update joined date
-          const joinedEl = document.getElementById('joined-count');
-          joinedEl.className = 'value joined';
-          const joinedDate = new Date(user.created_at);
-          joinedEl.innerHTML = `
-            <div>${getRelativeTimeString(joinedDate)}</div>
-            <div class="ago">ago</div>
+          const card = document.createElement('a');
+          card.href = `https://websim.ai/@${user.username}`;
+          card.className = 'user-card';
+          card.innerHTML = `
+            <img class="user-avatar" src="${user.avatar_url || ''}" 
+                 alt="${user.username}'s avatar" 
+                 style="width: ${Config.userAvatarSize}px; height: ${Config.userAvatarSize}px;"
+                 onerror="this.src='https://images.websim.ai/avatar/anonymous'">
+            <div class="user-name">${user.username}</div>
           `;
           
-          // Get initial counts directly from API
-          const [followingCount, followersCount, stats] = await Promise.all([
-            fetchFollowingCount(),
-            fetchFollowersCount(),
-            fetchUserStats()
-          ]);
-          
-          document.getElementById('following-count').innerHTML = formatNumber(followingCount || 0);
-          document.getElementById('followers-count').innerHTML = formatNumber(followersCount || 0);
-          document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
-          document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
-          
-          // Reset project data
-          projectsData = [];
-          projectsAfterCursor = null;
-          
-          // Fetch all data concurrently
-          Promise.allSettled([
-            fetchRecentFollower(),
-            loadMoreProjects(),
-            fetchUnpostedProjects().then(unpostedCount => {
-              updateStatWithPercentile('unposted-count', unpostedCount, 'unposted');
-            })
-          ]).then(results => {
-            results.forEach(result => {
-              if (result.status === 'rejected') {
-                console.error('Error during concurrent data loading:', result.reason);
-              }
-            });
+          card.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            // Set username display
+            const usernameEl = document.getElementById('username');
+            usernameEl.textContent = user.username;
+            document.querySelector('.username-hint').classList.add('hidden');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Reset data
+            AppState.reset();
+            
+            // Clear all grids
+            document.getElementById('projects-grid').innerHTML = '';
+            document.getElementById('followers-grid').innerHTML = '';
+            document.getElementById('following-grid').innerHTML = '';
+            document.getElementById('friends-grid').innerHTML = '';
+            
+            // Reset stats displays
+            this.resetStatsToLoading();
+            
+            // Update current username and initialize new profile
+            AppState.setUsername(user.username);
+            await ProfileController.initProfile();
           });
           
+          return card;
+        },
+        
+        /**
+         * Create a project card element for projects view
+         */
+        createProjectCard(project, project_revision, site) {
+          if (!project) return document.createElement('div');
+          
+          const card = document.createElement('div');
+          card.className = 'card';
+          
+          // Create preview image or placeholder
+          const previewHtml = site
+            ? `<img class="preview-image" 
+                    src="https://images.websim.ai/v1/site/${site.id}/600" 
+                    alt="Preview of ${project.title || 'Untitled Project'}" 
+                    style="height: ${Config.projectPreviewHeight}px;"
+                    loading="lazy"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <div class="preview-image" 
+                    style="height: ${Config.projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
+                 No Preview Available
+               </div>`
+            : `<div class="preview-image" 
+                   style="height: ${Config.projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
+                  No Preview
+                </div>`;
+          
+          card.innerHTML = `
+            <div class="project-link" style="text-decoration: none; color: inherit; cursor: pointer;">
+              ${previewHtml}
+              <div class="card-content">
+                <h3>${project.title || 'Untitled Project'}</h3>
+                <div class="card-stats">
+                  <span>👁️ ${Utils.formatNumber(project.stats.views)}</span>
+                  <span>❤️ ${Utils.formatNumber(project.stats.likes)}</span>
+                </div>
+                <div class="card-meta">
+                  ${Utils.getRelativeTimeString(new Date(project.created_at))} ago
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // Add click handler to open modal
+          const projectLink = card.querySelector('.project-link');
+          projectLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const modal = document.querySelector('.modal');
+            const overlay = document.querySelector('.modal-overlay');
+            const iframe = modal.querySelector('iframe');
+            const projectUrl = `https://websim.ai/p/${project.id}`;
+            
+            iframe.src = projectUrl;
+            
+            let openNewTab = modal.querySelector('.open-new-tab');
+            if (!openNewTab) {
+              openNewTab = document.createElement('a');
+              openNewTab.className = 'open-new-tab';
+              openNewTab.target = '_blank';
+              openNewTab.textContent = '↗️ Open in new tab';
+              modal.appendChild(openNewTab);
+            }
+            openNewTab.href = projectUrl;
+            
+            overlay.classList.add('active');
+            modal.classList.add('active');
+          });
+          
+          return card;
+        },
+        
+        /**
+         * Sort and display projects according to current sort criterion
+         */
+        sortProjects() {
+          try {
+            const projectsGrid = document.getElementById('projects-grid');
+            projectsGrid.innerHTML = '';
+            
+            let sortedProjects = [...AppState.projectsData];
+            switch (AppState.currentSort) {
+              case 'views':
+                sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views);
+                break;
+              case 'likes':
+                sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes);
+                break;
+              case 'recent':
+              default:
+                sortedProjects.sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at));
+                break;
+            }
+            
+            sortedProjects.forEach(({ project, project_revision, site }) => {
+              const card = this.createProjectCard(project, project_revision, site);
+              projectsGrid.appendChild(card);
+            });
+          } catch (error) {
+            console.error('Error sorting projects:', error);
+          }
+        }
+      };
+      
+      /**
+       * BackgroundAnimation - Handles the synthwave grid background
+       */
+      const BackgroundAnimation = {
+        /**
+         * Initialize synthwave grid background
+         */
+        init() {
+          const canvas = document.getElementById('grid-background');
+          const ctx = canvas.getContext('2d');
+          
+          // Resize canvas to window size
+          function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+          }
+          
+          resizeCanvas();
+          window.addEventListener('resize', resizeCanvas);
+          
+          // Animation variables
+          let offset = 0;
+          
+          // Animation loop
+          function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#120638');
+            gradient.addColorStop(0.5, '#2d1b69');
+            gradient.addColorStop(1, '#5a1a80');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw sun
+            const sunRadius = Config.synthSunSize / 2;
+            const sunY = canvas.height * Config.gridHorizon;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, sunY, sunRadius, 0, Math.PI * 2);
+            ctx.fillStyle = Config.synthSunColor;
+            ctx.shadowColor = Config.synthSunColor;
+            ctx.shadowBlur = 30;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Draw horizontal grid lines
+            const horizonY = canvas.height * Config.gridHorizon;
+            const gridSpacing = canvas.width / Config.gridLineCount;
+            
+            // Reset shadows for grid
+            ctx.shadowColor = Config.gridColorPrimary;
+            ctx.shadowBlur = Config.gridGlowIntensity;
+            
+            // Vertical lines (perspective)
+            ctx.lineWidth = Config.gridLineWidth;
+            
+            for (let i = 0; i <= Config.gridLineCount; i++) {
+              const x = i * gridSpacing;
+              
+              // Primary lines
+              ctx.beginPath();
+              ctx.moveTo(x, horizonY);
+              ctx.lineTo(x, canvas.height);
+              ctx.strokeStyle = Config.gridColorPrimary;
+              ctx.stroke();
+            }
+            
+            // Horizontal lines with animation
+            const horizontalLines = 20;
+            const animatedOffset = (offset % gridSpacing);
+            
+            ctx.shadowColor = Config.gridColorSecondary;
+            
+            for (let i = 0; i <= horizontalLines; i++) {
+              const progress = i / horizontalLines;
+              const y = horizonY + (canvas.height - horizonY) * progress;
+              
+              // Calculate perspective width
+              const perspectiveWidth = progress * canvas.width * 0.8;
+              const xStart = (canvas.width - perspectiveWidth) / 2;
+              const xEnd = xStart + perspectiveWidth;
+              
+              ctx.beginPath();
+              ctx.moveTo(xStart, y);
+              ctx.lineTo(xEnd, y);
+              ctx.strokeStyle = Config.gridColorSecondary;
+              ctx.stroke();
+            }
+            
+            // Update animation
+            offset += Config.gridSpeed / 60; // Speed adjusted for 60fps
+            
+            // Continue animation
+            requestAnimationFrame(animate);
+          }
+          
+          // Start animation
+          animate();
+        }
+      };
+      
+      /**
+       * DataController - Manages data loading and processing
+       */
+      const DataController = {
+        /**
+         * Update stats with direct API data
+         */
+        async updateWithDirectStats() {
+          try {
+            // Fetch direct stats from API
+            const stats = await ApiService.fetchUserStats();
+            
+            // Update views and likes directly from API
+            document.getElementById('views-count').innerHTML = Utils.formatNumber(stats.total_views || 0);
+            document.getElementById('likes-count').innerHTML = Utils.formatNumber(stats.total_likes || 0);
+            
+            // Calculate popularity and rating based on these direct values
+            let popularityScore = 0;
+            for (const threshold of Config.popularityThresholds) {
+              if ((stats.total_views || 0) >= threshold.views && (stats.total_likes || 0) >= threshold.likes) {
+                popularityScore = threshold.score;
+                break;
+              }
+            }
+            
+            // Calculate quality rating
+            let rating = 0;
+            if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
+              const viewsPerLike = stats.total_views / stats.total_likes;
+              rating = Config.ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
+            } else if ((stats.total_likes || 0) > 0) {
+              rating = 5; // Max rating if likes but no views
+            }
+            
+            // Update the stats display
+            await StatsService.updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
+            await StatsService.updateStatWithPercentile('rating-count', rating, 'rating');
+            
+            return stats;
+          } catch (error) {
+            console.error('Error updating direct stats:', error);
+          }
+        },
+        
+        /**
+         * Load and display projects
+         */
+        async loadMoreProjects() {
+          try {
+            if (AppState.isLoading) return;
+            AppState.isLoading = true;
+            
+            const projectLoadingEl = document.getElementById('projects-loading');
+            const loadMoreBtn = document.getElementById('load-more-projects');
+            
+            projectLoadingEl.style.display = 'block';
+            loadMoreBtn.style.display = 'none';
+            
+            const data = await ApiService.fetchProjects(AppState.projectsAfterCursor);
+            AppState.projectsData = AppState.projectsData.concat(data.data);
+            
+            // Update projects count immediately
+            document.getElementById('sites-count').innerHTML = Utils.formatNumber(AppState.projectsData.length);
+            
+            // Update stats from direct API once we have some projects
+            if (AppState.projectsData.length >= Config.initialStatsProjectCount && !AppState.projectsAfterCursor) {
+              await this.updateWithDirectStats();
+            }
+            
+            if (data.meta.has_next_page) {
+              AppState.projectsAfterCursor = data.meta.end_cursor;
+              AppState.isLoading = false;
+              
+              // Update the UI with what we have so far
+              UIService.sortProjects();
+              
+              // Continue loading more projects
+              setTimeout(() => this.loadMoreProjects(), 100);
+              return;
+            }
+            
+            // All projects loaded, finalize stats
+            const totalProjects = AppState.projectsData.length;
+            document.getElementById('sites-count').innerHTML = Utils.formatNumber(totalProjects);
+            
+            // Update project grid
+            UIService.sortProjects();
+            projectLoadingEl.style.display = 'none';
+            
+            // Final stats update from API
+            const apiStats = await ApiService.fetchUserStats();
+            
+            // Combine all user stats
+            const userStats = {
+              username: AppState.username,
+              projects: totalProjects,
+              views: apiStats.total_views || 0,
+              likes: apiStats.total_likes || 0,
+              followers: parseInt(document.getElementById('followers-count').innerText.replace(/[^\d]/g, '')) || 0,
+              following: parseInt(document.getElementById('following-count').innerText.replace(/[^\d]/g, '')) || 0,
+              friends: parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0,
+              popularity: parseInt(document.getElementById('popularity-count').innerText) || 0,
+              rating: parseInt(document.getElementById('rating-count').innerText) || 0,
+              unposted: parseInt(document.getElementById('unposted-count').innerText.replace(/[^\d]/g, '')) || 0
+            };
+            
+            // Store stats
+            await StatsService.storeUserStats(userStats);
+            
+            // Generate bio text if enabled
+            if (Config.enableAutoBio) {
+              const bioText = Utils.generateBioText(userStats);
+              document.getElementById('description').innerHTML = bioText;
+            }
+            
+            AppState.isLoading = false;
+          } catch (error) {
+            console.error('Error loading projects:', error);
+            document.getElementById('projects-loading').style.display = 'none';
+            document.getElementById('description').innerHTML = 'Error loading project data.';
+            AppState.isLoading = false;
+          }
+        },
+        
+        /**
+         * Load and display followers
+         */
+        async loadMoreFollowers() {
+          try {
+            const followersGrid = document.getElementById('followers-grid');
+            const followersLoading = document.getElementById('followers-loading');
+            
+            followersLoading.style.display = 'block';
+            
+            const data = await ApiService.fetchFollowers(AppState.followersAfterCursor);
+            
+            followersLoading.style.display = 'none';
+            
+            if (data.data.length === 0) {
+              if (followersGrid.children.length === 0) {
+                followersGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No followers yet!</div>`;
+              }
+              return;
+            }
+            
+            data.data.forEach(item => {
+              const card = UIService.createUserCard(item.user);
+              followersGrid.appendChild(card);
+            });
+            
+            if (data.meta.has_next_page) {
+              AppState.followersAfterCursor = data.meta.end_cursor;
+              // Load more when scrolled to bottom
+              const scrollHandler = () => {
+                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                  window.removeEventListener('scroll', scrollHandler);
+                  this.loadMoreFollowers();
+                }
+              };
+              window.addEventListener('scroll', scrollHandler);
+            }
+          } catch (error) {
+            console.error('Error loading followers:', error);
+            document.getElementById('followers-loading').style.display = 'none';
+          }
+        },
+        
+        /**
+         * Load and display following
+         */
+        async loadMoreFollowing() {
+          try {
+            const followingGrid = document.getElementById('following-grid');
+            const followingLoading = document.getElementById('following-loading');
+            
+            followingLoading.style.display = 'block';
+            
+            const data = await ApiService.fetchFollowing(AppState.followingAfterCursor);
+            
+            followingLoading.style.display = 'none';
+            
+            if (data.data.length === 0) {
+              if (followingGrid.children.length === 0) {
+                followingGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Not following anyone yet!</div>`;
+              }
+              return;
+            }
+            
+            data.data.forEach(item => {
+              const card = UIService.createUserCard(item.user);
+              followingGrid.appendChild(card);
+            });
+            
+            if (data.meta.has_next_page) {
+              AppState.followingAfterCursor = data.meta.end_cursor;
+              // Load more when scrolled to bottom
+              const scrollHandler = () => {
+                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                  window.removeEventListener('scroll', scrollHandler);
+                  this.loadMoreFollowing();
+                }
+              };
+              window.addEventListener('scroll', scrollHandler);
+            }
+          } catch (error) {
+            console.error('Error loading following:', error);
+            document.getElementById('following-loading').style.display = 'none';
+          }
+        },
+        
+        /**
+         * Find the intersection of followers and following (friends)
+         */
+        async getFriends() {
+          try {
+            const friendsGrid = document.getElementById('friends-grid');
+            friendsGrid.innerHTML = '';
+            
+            const friendsLoading = document.getElementById('friends-loading');
+            friendsLoading.style.display = 'block';
+            
+            // Initialize objects to store all followers and following
+            let allFollowers = {};
+            let allFollowing = {};
+            
+            // Fetch all followers
+            let followersAfter = null;
+            let hasMoreFollowers = true;
+            
+            while (hasMoreFollowers) {
+              const followers = await ApiService.fetchFollowers(followersAfter);
+              followers.data.forEach(item => {
+                allFollowers[item.user.id] = item.user;
+              });
+              
+              hasMoreFollowers = followers.meta.has_next_page;
+              followersAfter = followers.meta.end_cursor;
+            }
+            
+            // Fetch all following
+            let followingAfter = null;
+            let hasMoreFollowing = true;
+            
+            while (hasMoreFollowing) {
+              const following = await ApiService.fetchFollowing(followingAfter);
+              following.data.forEach(item => {
+                allFollowing[item.user.id] = item.user;
+              });
+              
+              hasMoreFollowing = following.meta.has_next_page;
+              followingAfter = following.meta.end_cursor;
+            }
+            
+            // Find intersection (friends)
+            let friends = [];
+            Object.keys(allFollowers).forEach(userId => {
+              if (allFollowing[userId]) {
+                friends.push(allFollowers[userId]);
+              }
+            });
+            
+            // Update friends count
+            document.getElementById('friends-count').innerHTML = Utils.formatNumber(friends.length);
+            
+            // Generate UI
+            friendsLoading.style.display = 'none';
+            
+            if (friends.length === 0) {
+              friendsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No mutual connections yet!</div>`;
+              return;
+            }
+            
+            friends.forEach(user => {
+              const card = UIService.createUserCard(user);
+              friendsGrid.appendChild(card);
+            });
+          } catch (error) {
+            console.error('Error loading friends:', error);
+            document.getElementById('friends-loading').style.display = 'none';
+            document.getElementById('friends-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading friends data</div>`;
+          }
+        }
+      };
+      
+      /**
+       * ProfileController - Manages profile initialization and event binding
+       */
+      const ProfileController = {
+        /**
+         * Set up event handlers for UI interactions
+         */
+        setupEventHandlers() {
           // Set up event listeners for sort buttons
           document.querySelectorAll('.sort-button').forEach(button => {
             button.addEventListener('click', () => {
               document.querySelectorAll('.sort-button').forEach(b => b.classList.remove('active'));
               button.classList.add('active');
-              currentSort = button.dataset.sort;
-              sortProjects();
+              AppState.currentSort = button.dataset.sort;
+              UIService.sortProjects();
             });
           });
           
@@ -1525,12 +1805,12 @@
               const viewElement = document.getElementById(`${viewType}-view`);
               viewElement.style.display = 'block';
               
-              if (viewType === 'followers' && !followersAfterCursor) {
-                await loadMoreFollowers();
-              } else if (viewType === 'following' && !followingAfterCursor) {
-                await loadMoreFollowing();
+              if (viewType === 'followers' && !AppState.followersAfterCursor) {
+                await DataController.loadMoreFollowers();
+              } else if (viewType === 'following' && !AppState.followingAfterCursor) {
+                await DataController.loadMoreFollowing();
               } else if (viewType === 'friends') {
-                await getFriends();
+                await DataController.getFriends();
               }
             });
           });
@@ -1540,9 +1820,9 @@
           searchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
               const newUsername = searchInput.value.trim();
-              if (newUsername && newUsername !== username) {
-                username = newUsername;
-                await initProfile();
+              if (newUsername && newUsername !== AppState.username) {
+                AppState.setUsername(newUsername);
+                await this.initProfile();
                 searchInput.value = '';
               }
             }
@@ -1550,10 +1830,11 @@
           
           const searchToggle = document.getElementById('search-toggle');
           searchToggle.addEventListener('click', async () => {
+            const searchInput = document.getElementById('user-search');
             const newUsername = searchInput.value.trim();
-            if (newUsername && newUsername !== username) {
-              username = newUsername;
-              await initProfile();
+            if (newUsername && newUsername !== AppState.username) {
+              AppState.setUsername(newUsername);
+              await this.initProfile();
               searchInput.value = '';
             }
           });
@@ -1566,340 +1847,91 @@
               document.querySelector('.modal iframe').src = '';
             }, 300);
           });
-        } catch (error) {
-          console.error('Error initializing profile:', error);
-          document.getElementById('description').innerHTML = 'Error loading profile data.';
-        }
-      }
-      
-      // ===== UI CREATION FUNCTIONS =====
-      
-      /**
-       * Create a user card element for followers/following/friends views
-       */
-      function createUserCard(user) {
-        if (!user) return document.createElement('div');
+        },
         
-        const card = document.createElement('a');
-        card.href = `https://websim.ai/@${user.username}`;
-        card.className = 'user-card';
-        card.innerHTML = `
-          <img class="user-avatar" src="${user.avatar_url || ''}" 
-               alt="${user.username}'s avatar" 
-               style="width: ${userAvatarSize}px; height: ${userAvatarSize}px;"
-               onerror="this.src='https://images.websim.ai/avatar/anonymous'">
-          <div class="user-name">${user.username}</div>
-        `;
-        
-        card.addEventListener('click', async (e) => {
-          e.preventDefault();
-          
-          // Set username display
-          const usernameEl = document.getElementById('username');
-          usernameEl.textContent = user.username;
-          document.querySelector('.username-hint').classList.add('hidden');
-          
-          // Scroll to top
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          
-          // Reset data
-          projectsData = [];
-          projectsAfterCursor = null;
-          followersAfterCursor = null;
-          followingAfterCursor = null;
-          
-          // Clear all grids
-          document.getElementById('projects-grid').innerHTML = '';
-          document.getElementById('followers-grid').innerHTML = '';
-          document.getElementById('following-grid').innerHTML = '';
-          document.getElementById('friends-grid').innerHTML = '';
-          
-          // Reset stats displays
-          resetStatsToLoading();
-          
-          // Update current username and initialize new profile
-          username = user.username;
-          await initProfile();
-        });
-        
-        return card;
-      }
-      
-      /**
-       * Create a project card element for projects view
-       */
-      function createProjectCard(project, project_revision, site) {
-        if (!project) return document.createElement('div');
-        
-        const card = document.createElement('div');
-        card.className = 'card';
-        
-        // Create preview image or placeholder
-        const previewHtml = site
-          ? `<img class="preview-image" 
-                  src="https://images.websim.ai/v1/site/${site.id}/600" 
-                  alt="Preview of ${project.title || 'Untitled Project'}" 
-                  style="height: ${projectPreviewHeight}px;"
-                  loading="lazy"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-             <div class="preview-image" 
-                  style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
-               No Preview Available
-             </div>`
-          : `<div class="preview-image" 
-                 style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
-                No Preview
-              </div>`;
-        
-        card.innerHTML = `
-          <div class="project-link" style="text-decoration: none; color: inherit; cursor: pointer;">
-            ${previewHtml}
-            <div class="card-content">
-              <h3>${project.title || 'Untitled Project'}</h3>
-              <div class="card-stats">
-                <span>👁️ ${formatNumber(project.stats.views)}</span>
-                <span>❤️ ${formatNumber(project.stats.likes)}</span>
-              </div>
-              <div class="card-meta">
-                ${getRelativeTimeString(new Date(project.created_at))} ago
-              </div>
-            </div>
-          </div>
-        `;
-        
-        // Add click handler to open modal
-        const projectLink = card.querySelector('.project-link');
-        projectLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          
-          const modal = document.querySelector('.modal');
-          const overlay = document.querySelector('.modal-overlay');
-          const iframe = modal.querySelector('iframe');
-          const projectUrl = `https://websim.ai/p/${project.id}`;
-          
-          iframe.src = projectUrl;
-          
-          let openNewTab = modal.querySelector('.open-new-tab');
-          if (!openNewTab) {
-            openNewTab = document.createElement('a');
-            openNewTab.className = 'open-new-tab';
-            openNewTab.target = '_blank';
-            openNewTab.textContent = '↗️ Open in new tab';
-            modal.appendChild(openNewTab);
-          }
-          openNewTab.href = projectUrl;
-          
-          overlay.classList.add('active');
-          modal.classList.add('active');
-        });
-        
-        return card;
-      }
-      
-      /**
-       * Generate a bio text based on user stats
-       */
-      /* @tweakable Include additional details in auto-generated bio */
-      const bioIncludeProjectDetails = true;
-
-      /* @tweakable Include social stats in auto-generated bio */
-      const bioIncludeSocialStats = true;
-      
-      function generateBioText(userStats) {
-        if (!userStats || !window.currentUserProfile) {
-          return 'Loading bio...';
-        }
-        
-        const user = window.currentUserProfile;
-        
-        if (!projectsData || projectsData.length === 0) {
-          return `Hello! My name is ${user.username}. I joined websim on ${new Date(user.created_at).toLocaleDateString()}.`;
-        }
-        
-        let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
-        
-        // Project stats
-        const totalViews = userStats.views;
-        const projectsCount = userStats.projects;
-        
-        bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
-        if (totalViews > 0) { 
-          bioText += ` with ${formatNumber(totalViews)} total views`; 
-        }
-        bioText += '. ';
-        
-        if (bioIncludeProjectDetails) {
-          // Sort projects to find latest, most viewed, most liked
-          const sortedByDate = [...projectsData].sort((a, b) => 
-            new Date(b.project.created_at) - new Date(a.project.created_at));
-          
-          const sortedByViews = [...projectsData].sort((a, b) => 
-            b.project.stats.views - a.project.stats.views);
-          
-          const sortedByLikes = [...projectsData].sort((a, b) => 
-            b.project.stats.likes - a.project.stats.likes);
-          
-          // Add latest project info
-          if (sortedByDate.length > 0) {
-            const latestProject = sortedByDate[0].project;
-            bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>`;
+        /**
+         * Initialize the user profile page
+         */
+        async initProfile() {
+          try {
+            document.querySelector('.username-hint').classList.add('hidden');
+            UIService.resetStatsToLoading();
             
-            const projectDate = new Date(latestProject.created_at).toLocaleDateString();
-            if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
-              bioText += ` which I made on ${projectDate}`;
+            const user = await ApiService.fetchUserProfile();
+            if (!user) {
+              document.getElementById('description').innerHTML = 'Error: User not found.';
+              return;
             }
-            bioText += '. ';
-          }
-          
-          // Add most viewed project info
-          if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
-            const mostViewedProject = sortedByViews[0].project;
-            bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
-          }
-          
-          // Add most liked project info
-          if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
-            const mostLikedProject = sortedByLikes[0].project;
-            bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
-          }
-        }
-        
-        // Add social info
-        if (bioIncludeSocialStats) {
-          let socialText = [];
-          if (userStats.following > 0) {
-            socialText.push(`I'm following ${formatNumber(userStats.following)} people`);
-          }
-          
-          if (userStats.followers > 0) {
-            socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
-          }
-          
-          if (socialText.length > 0) {
-            bioText += socialText.join(' and ') + '.';
-          }
-        }
-        
-        return bioText;
-      }
-      
-      // ===== SYNTHWAVE BACKGROUND ANIMATION =====
-      /**
-       * Initialize synthwave grid background
-       */
-      function initSynthwaveBackground() {
-        const canvas = document.getElementById('grid-background');
-        const ctx = canvas.getContext('2d');
-        
-        // Resize canvas to window size
-        function resizeCanvas() {
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-        }
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // Animation variables
-        let offset = 0;
-        
-        // Animation loop
-        function animate() {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw background gradient
-          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-          gradient.addColorStop(0, '#120638');
-          gradient.addColorStop(0.5, '#2d1b69');
-          gradient.addColorStop(1, '#5a1a80');
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw sun
-          const sunRadius = synthSunSize / 2;
-          const sunY = canvas.height * gridHorizon;
-          ctx.beginPath();
-          ctx.arc(canvas.width / 2, sunY, sunRadius, 0, Math.PI * 2);
-          ctx.fillStyle = synthSunColor;
-          ctx.shadowColor = synthSunColor;
-          ctx.shadowBlur = 30;
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          
-          // Draw horizontal grid lines
-          const horizonY = canvas.height * gridHorizon;
-          const gridSpacing = canvas.width / gridLineCount;
-          
-          // Reset shadows for grid
-          ctx.shadowColor = gridColorPrimary;
-          ctx.shadowBlur = gridGlowIntensity;
-          
-          // Vertical lines (perspective)
-          ctx.lineWidth = gridLineWidth;
-          
-          for (let i = 0; i <= gridLineCount; i++) {
-            const x = i * gridSpacing;
             
-            // Primary lines
-            ctx.beginPath();
-            ctx.moveTo(x, horizonY);
-            ctx.lineTo(x, canvas.height);
-            ctx.strokeStyle = gridColorPrimary;
-            ctx.stroke();
-          }
-          
-          // Horizontal lines with animation
-          const horizontalLines = 20;
-          const animatedOffset = (offset % gridSpacing);
-          
-          ctx.shadowColor = gridColorSecondary;
-          
-          for (let i = 0; i <= horizontalLines; i++) {
-            const progress = i / horizontalLines;
-            const y = horizonY + (canvas.height - horizonY) * progress;
+            AppState.currentUserProfile = user;
+            document.getElementById('username').textContent = user.username;
+            document.getElementById('avatar').src = user.avatar_url || '';
+            document.getElementById('avatar').onerror = function() {
+              this.src = 'https://images.websim.ai/avatar/anonymous';
+            };
             
-            // Calculate perspective width
-            const perspectiveWidth = progress * canvas.width * 0.8;
-            const xStart = (canvas.width - perspectiveWidth) / 2;
-            const xEnd = xStart + perspectiveWidth;
+            BackgroundAnimation.init();
             
-            ctx.beginPath();
-            ctx.moveTo(xStart, y);
-            ctx.lineTo(xEnd, y);
-            ctx.strokeStyle = gridColorSecondary;
-            ctx.stroke();
+            // Update joined date
+            const joinedEl = document.getElementById('joined-count');
+            joinedEl.className = 'value joined';
+            const joinedDate = new Date(user.created_at);
+            joinedEl.innerHTML = `
+              <div>${Utils.getRelativeTimeString(joinedDate)}</div>
+              <div class="ago">ago</div>
+            `;
+            
+            // Get initial counts directly from API
+            const [followingCount, followersCount, stats] = await Promise.all([
+              ApiService.fetchFollowingCount(),
+              ApiService.fetchFollowersCount(),
+              ApiService.fetchUserStats()
+            ]);
+            
+            document.getElementById('following-count').innerHTML = Utils.formatNumber(followingCount || 0);
+            document.getElementById('followers-count').innerHTML = Utils.formatNumber(followersCount || 0);
+            document.getElementById('views-count').innerHTML = Utils.formatNumber(stats.total_views || 0);
+            document.getElementById('likes-count').innerHTML = Utils.formatNumber(stats.total_likes || 0);
+            
+            // Reset project data
+            AppState.projectsData = [];
+            AppState.projectsAfterCursor = null;
+            
+            // Fetch all data concurrently
+            Promise.allSettled([
+              ApiService.fetchRecentFollower(),
+              DataController.loadMoreProjects(),
+              ApiService.fetchUnpostedProjects().then(unpostedCount => {
+                StatsService.updateStatWithPercentile('unposted-count', unpostedCount, 'unposted');
+              })
+            ]).then(results => {
+              results.forEach(result => {
+                if (result.status === 'rejected') {
+                  console.error('Error during concurrent data loading:', result.reason);
+                }
+              });
+            });
+          } catch (error) {
+            console.error('Error initializing profile:', error);
+            document.getElementById('description').innerHTML = 'Error loading profile data.';
           }
-          
-          // Update animation
-          offset += gridSpeed / 60; // Speed adjusted for 60fps
-          
-          // Continue animation
-          requestAnimationFrame(animate);
-        }
+        },
         
-        // Start animation
-        animate();
-      }
-      
-      // Initialize the profile page
-      document.querySelector('.username-hint').classList.remove('hidden');
-      
-      // Wait for WebsimSocket to initialize
-      room.initialize().then(() => {
-        initProfile();
-      });
-      
-      // Set up search functionality
-      document.getElementById('user-search').addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-          const newUsername = e.target.value.trim();
-          if (newUsername && newUsername !== username) {
-            username = newUsername;
-            await initProfile();
-            e.target.value = '';
-          }
+        /**
+         * Initialize the application
+         */
+        async init() {
+          this.setupEventHandlers();
+          document.querySelector('.username-hint').classList.remove('hidden');
+          
+          // Initialize the profile once WebsimSocket is ready
+          await room.initialize();
+          await this.initProfile();
         }
-      });
+      };
+      
+      // Start the application
+      ProfileController.init();
     </script>
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
