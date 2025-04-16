@@ -3,6 +3,41 @@
     <base href="abandonedmuse" />
     <title>User Profile Viewer</title>
     <style>
+      :root {
+        /* @tweakable Main background color */
+        --bg-color: #120638;
+        
+        /* @tweakable Primary text color */
+        --text-color: #ffffff;
+        
+        /* @tweakable Secondary text color */
+        --text-secondary: #a8b2ff;
+        
+        /* @tweakable Card background color */
+        --card-bg: rgba(16, 9, 44, 0.8);
+        
+        /* @tweakable Stat card background color */
+        --stats-card-bg: rgba(16, 9, 44, 0.8);
+        
+        /* @tweakable Primary neon color */
+        --neon-primary: #ff00ff;
+        
+        /* @tweakable Secondary neon color */
+        --neon-secondary: #00eeff;
+        
+        /* @tweakable Tertiary neon color */
+        --neon-tertiary: #bf00ff;
+        
+        /* @tweakable Neon glow intensity */
+        --neon-glow: 5px;
+        
+        /* @tweakable Border width for neon effects */
+        --neon-border-width: 2px;
+        
+        /* @tweakable Border radius for cards */
+        --card-radius: 1rem;
+      }
+      
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -12,11 +47,11 @@
         width: 40px;
         height: 40px;
         border: 3px solid rgba(255,255,255,0.1);
-        border-top: 3px solid #2196f3;
-        border-right: 3px solid #2196f3;
+        border-top: 3px solid var(--neon-secondary);
+        border-right: 3px solid var(--neon-primary);
         border-radius: 50%;
         animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-        box-shadow: 0 0 10px rgba(33,150,243,0.2);
+        box-shadow: 0 0 10px rgba(255,105,180,0.5);
       }
       .loading-container {
         width: 100%;
@@ -40,10 +75,10 @@
       }
       .value.joined .ago {
         font-size: 0.9rem;
-        color: #aaa;
+        color: var(--text-secondary);
         margin-top: -0.5rem;
       }
-      #animated-background {
+      #grid-background {
         position: fixed;
         top: 0;
         left: 0;
@@ -63,19 +98,28 @@
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         line-height: 1.6;
-        color: #ffffff;
-        background: #121212;
+        color: var(--text-color);
+        background: var(--bg-color);
         padding: 2rem;
+        min-height: 100vh;
       }
       .container {
         max-width: 1200px;
         margin: 0 auto;
+        border: var(--neon-border-width) solid var(--neon-primary);
+        border-radius: var(--card-radius);
+        padding: 2rem;
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary), 
+                    inset 0 0 var(--neon-glow) var(--neon-primary);
+        background-color: rgba(0, 0, 0, 0.3);
       }
       .profile-header {
-        background: #1e1e1e;
-        border-radius: 1rem;
+        background: var(--card-bg);
+        border-radius: var(--card-radius);
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-secondary), 
+                    inset 0 0 calc(var(--neon-glow) * 0.5) var(--neon-secondary);
+        border: var(--neon-border-width) solid var(--neon-secondary);
         display: grid;
         grid-template-columns: auto 1fr;
         gap: 2rem;
@@ -84,19 +128,21 @@
         width: 150px;
         height: 150px;
         border-radius: 50%;
-        background: #2a2a2a;
+        border: var(--neon-border-width) solid var(--neon-tertiary);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
       }
       .profile-info h1 {
         font-size: 2.5rem;
+        text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
       }
       .profile-info h1 span {
         outline: none;
-        border-bottom: 1px dashed #555;
+        border-bottom: 1px dashed var(--neon-secondary);
         padding: 0 4px;
       }
       .username-hint {
         font-size: 0.8rem;
-        color: #666;
+        color: var(--text-secondary);
         margin-left: 1rem;
         opacity: 1;
         transition: opacity 0.3s ease;
@@ -107,12 +153,12 @@
         opacity: 0;
       }
       #username[contenteditable=true]:hover {
-        background: rgba(33, 150, 243, 0.1);
+        background: rgba(255, 0, 255, 0.2);
         border-radius: 4px;
         cursor: text;
       }
       #username[contenteditable=true]:focus {
-        background: rgba(33, 150, 243, 0.2);
+        background: rgba(255, 0, 255, 0.3);
         border-radius: 4px;
       }
       .social-links {
@@ -125,45 +171,56 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
         margin-bottom: 1rem;
-        margin-top: -1rem;
+        margin-top: 2rem;
       }
       .stat-card {
-        background: #1e1e1e;
+        background: var(--stats-card-bg);
         padding: 1.5rem;
-        border-radius: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        border-radius: var(--card-radius);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
+        border: var(--neon-border-width) solid var(--neon-tertiary);
         text-align: center;
+        transition: all 0.3s ease;
+      }
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-tertiary);
       }
       .stat-card h3 {
-        color: #aaa;
+        color: var(--text-secondary);
         font-size: 1.3rem;
         letter-spacing: 0.05em;
         margin-bottom: 0.5rem;
         text-align: center;
+        text-shadow: 0 0 5px var(--neon-tertiary);
       }
       .stat-card .value {
         font-size: 3rem;
         font-weight: bold;
-        color: #ffffff;
+        color: var(--text-color);
         text-align: center;
+        text-shadow: 0 0 10px var(--neon-primary);
       }
       .view-button {
-        background: #2a2a2a;
-        border: none;
-        color: #aaa;
+        background: rgba(0, 0, 0, 0.3);
+        border: var(--neon-border-width) solid var(--neon-tertiary);
+        color: var(--text-secondary);
         padding: 0.8rem 1.5rem;
         border-radius: 0.5rem;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 1.1rem;
+        box-shadow: 0 0 calc(var(--neon-glow) * 0.5) var(--neon-tertiary);
       }
       .view-button:hover {
-        background: #333;
-        color: #fff;
+        background: rgba(191, 0, 255, 0.2);
+        color: var(--text-color);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
       }
       .view-button.active {
-        background: #2196f3;
-        color: #fff;
+        background: var(--neon-tertiary);
+        color: var(--text-color);
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-tertiary);
       }
       .view-content {
         margin-top: 1.5rem;
@@ -174,25 +231,29 @@
         gap: 1.5rem;
       }
       .card {
-        background: #2a2a2a;
+        background: var(--card-bg);
         border-radius: 0.5rem;
         overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        transition: transform 0.2s;
+        box-shadow: 0 0 var(--neon-glow) var(--neon-secondary);
+        border: var(--neon-border-width) solid var(--neon-secondary);
+        transition: transform 0.2s, box-shadow 0.2s;
         text-decoration: none;
       }
       .card:hover {
-        transform: translateY(-2px);
+        transform: translateY(-5px);
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-secondary);
       }
       .card-content {
         padding: 1rem;
       }
       .card h3 {
         margin-bottom: 0.5rem;
+        color: var(--text-color);
+        text-shadow: 0 0 5px var(--neon-secondary);
       }
       .card-meta {
         font-size: 0.9rem;
-        color: #aaa;
+        color: var(--text-secondary);
       }
       .loading-container {
         width: 100%;
@@ -201,54 +262,65 @@
         padding: 2rem 0;
       }
       .recent-follower-card {
-        background: #1e1e1e;
+        background: var(--stats-card-bg);
         padding: 1.5rem;
         min-height: 100%;
-        border-radius: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        border-radius: var(--card-radius);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary);
+        border: var(--neon-border-width) solid var(--neon-primary);
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 1rem;
+        transition: all 0.3s ease;
+      }
+      .recent-follower-card:hover {
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-primary);
       }
       .recent-follower-card h3 {
-        color: #aaa;
+        color: var(--text-secondary);
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 0.5rem;
         text-align: center;
+        text-shadow: 0 0 5px var(--neon-primary);
       }
       .recent-follower-avatar {
         width: 80px;
         height: 80px;
         border-radius: 50%;
         object-fit: cover;
+        border: var(--neon-border-width) solid var(--neon-primary);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary);
       }
       .recent-follower-name {
         font-size: 1.1rem;
-        color: #ffffff;
+        color: var(--text-color);
         text-align: center;
+        text-shadow: 0 0 5px var(--neon-primary);
       }
       .load-more {
         display: none;
         margin: 2rem auto;
         padding: 1rem 2rem;
-        background: #2196f3;
+        background: var(--neon-primary);
         border: none;
         border-radius: 0.5rem;
         color: white;
         cursor: pointer;
         font-size: 1.1rem;
-        transition: background 0.2s;
+        transition: background 0.2s, box-shadow 0.2s;
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary);
       }
       .load-more:hover {
-        background: #1976d2;
+        background: #d400d4;
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-primary);
       }
       .preview-image {
         width: 100%;
         height: 200px;
-        background: #2a2a2a;
+        background: rgba(0, 0, 0, 0.5);
         object-fit: cover;
         transition: opacity 0.2s;
       }
@@ -260,7 +332,7 @@
         gap: 1rem;
         margin-top: 0.5rem;
         font-size: 0.9rem;
-        color: #aaa;
+        color: var(--text-secondary);
       }
       .user-grid {
         display: grid;
@@ -274,22 +346,30 @@
         text-align: center;
         text-decoration: none;
         color: inherit;
-        transition: transform 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: var(--card-radius);
+        border: var(--neon-border-width) solid var(--neon-tertiary);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
       }
       .user-card:hover {
         transform: scale(1.05);
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-tertiary);
       }
       .user-avatar {
         width: 80px;
         height: 80px;
         border-radius: 50%;
         margin-bottom: 0.5rem;
-        background: #eee;
+        border: var(--neon-border-width) solid var(--neon-tertiary);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
       }
       .user-name {
         font-size: 0.9rem;
-        color: #ffffff;
+        color: var(--text-color);
         word-break: break-word;
+        text-shadow: 0 0 5px var(--neon-tertiary);
       }
       .sort-controls {
         margin-bottom: 1.5rem;
@@ -297,21 +377,24 @@
         gap: 0.5rem;
       }
       .sort-button {
-        background: #2a2a2a;
-        border: none;
-        color: #aaa;
+        background: rgba(0, 0, 0, 0.3);
+        border: var(--neon-border-width) solid var(--neon-secondary);
+        color: var(--text-secondary);
         padding: 0.5rem 1rem;
         border-radius: 0.5rem;
         cursor: pointer;
         transition: all 0.2s;
+        box-shadow: 0 0 calc(var(--neon-glow) * 0.5) var(--neon-secondary);
       }
       .sort-button:hover {
-        background: #333;
-        color: #fff;
+        background: rgba(0, 238, 255, 0.2);
+        color: var(--text-color);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-secondary);
       }
       .sort-button.active {
-        background: #2196f3;
-        color: #fff;
+        background: var(--neon-secondary);
+        color: var(--text-color);
+        box-shadow: 0 0 calc(var(--neon-glow) * 1.5) var(--neon-secondary);
       }
       .search-box {
         position: fixed;
@@ -324,14 +407,15 @@
       .search-input {
         padding: 8px 12px;
         border-radius: 4px;
-        border: 1px solid #2196f3;
-        background: #2a2a2a;
+        border: var(--neon-border-width) solid var(--neon-tertiary);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         font-size: 16px;
         width: 200px;
+        box-shadow: 0 0 var(--neon-glow) var(--neon-tertiary);
       }
       .search-input::placeholder {
-        color: #aaa;
+        color: var(--text-secondary);
       }
       .modal-overlay {
         position: fixed;
@@ -354,7 +438,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) scale(0.7);
-        background: #1e1e1e;
+        background: var(--card-bg);
         border-radius: 1rem;
         opacity: 0;
         visibility: hidden;
@@ -364,6 +448,8 @@
         height: 80vh;
         display: flex;
         flex-direction: column;
+        border: var(--neon-border-width) solid var(--neon-primary);
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary);
       }
       .modal.active {
         opacity: 1;
@@ -381,6 +467,7 @@
         cursor: pointer;
         padding: 0.5rem;
         transition: transform 0.2s;
+        text-shadow: 0 0 var(--neon-glow) var(--neon-primary);
       }
       .modal-close:hover {
         transform: scale(1.1);
@@ -397,12 +484,14 @@
         text-align: center;
         padding: 10px;
         text-decoration: none;
-        color: #2196f3;
+        color: var(--neon-secondary);
         font-size: 1rem;
         transition: color 0.2s;
+        text-shadow: 0 0 5px var(--neon-secondary);
       }
       .open-new-tab:hover {
-        color: #1976d2;
+        color: white;
+        text-shadow: 0 0 10px var(--neon-secondary);
       }
       #recent-follower {
         cursor: pointer;
@@ -415,7 +504,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #2196f3;
+        background: var(--neon-primary);
         color: white;
         border: none;
         border-radius: 50%;
@@ -424,11 +513,15 @@
         font-size: 20px;
         cursor: pointer;
         margin-left: 10px;
+        box-shadow: 0 0 var(--neon-glow) var(--neon-primary);
+      }
+      .search-toggle:hover {
+        box-shadow: 0 0 calc(var(--neon-glow) * 2) var(--neon-primary);
       }
     </style>
   </head>
   <body>
-    <canvas id="animated-background"></canvas>
+    <canvas id="grid-background"></canvas>
     <div class="container" id="app">
       <div class="search-box">
         <input type="text" class="search-input" placeholder="Enter username..." id="user-search">
@@ -439,7 +532,7 @@
           <img class="avatar" id="avatar" alt="Profile avatar">
           <div class="profile-info">
             <h1>
-              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed #555; padding: 0 4px;"></span>
+              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed var(--neon-secondary); padding: 0 4px;"></span>
               <span class="username-hint">← You can edit the name!</span>
             </h1>
             <p id="description"></p>
@@ -495,7 +588,6 @@
           <div class="value" id="unposted-count"><div class="loading-spinner"></div></div>
         </div>
       </div>
-      <iframe src="https://websim.ai/@abandonedmuse/my-projects" style="width: 100%; height: 600px; border: none; border-radius: 1rem; margin: 2rem 0; background: #1e1e1e;" title="My Projects"></iframe>
       <div class="content-section">
         <div class="sort-controls">
           <button class="view-button active" data-view="projects">Projects</button>
@@ -548,19 +640,34 @@
       const room = new WebsimSocket();
       
       // Config and Tweakable Values
-      /* @tweakable Number of floating images in the background */
-      const backgroundParticleCount = 150;
+      /* @tweakable Number of grid lines in the background */
+      const gridLineCount = 20;
       
-      /* @tweakable Base speed factor for floating images (0.5-2.0) */
-      const backgroundParticleSpeed = 1.0;
+      /* @tweakable Grid horizon position (0.0-1.0, higher values push horizon down) */
+      const gridHorizon = 0.5;
       
-      /* @tweakable Base size of floating image particles in pixels */
-      const particleBaseSize = 60;
+      /* @tweakable Grid animation speed (pixels per second) */
+      const gridSpeed = 20;
       
-      /* @tweakable Opacity of floating image particles (0.0-1.0) */
-      const particleOpacity = 0.1;
+      /* @tweakable Primary grid color */
+      const gridColorPrimary = "#ff00ff";
       
-      /* @tweakable Size of user avatar in follower/following lists in pixels */
+      /* @tweakable Secondary grid color */
+      const gridColorSecondary = "#00eeff";
+      
+      /* @tweakable Grid line width */
+      const gridLineWidth = 2;
+      
+      /* @tweakable Grid line glow intensity */
+      const gridGlowIntensity = 10;
+      
+      /* @tweakable Sun size in pixels */
+      const synthSunSize = 120;
+      
+      /* @tweakable Sun color */
+      const synthSunColor = "#ff00ff";
+      
+      /* @tweakable Base size of user avatar in follower/following lists in pixels */
       const userAvatarSize = 80;
       
       /* @tweakable Height of the project preview image in pixels */
@@ -852,7 +959,61 @@
         }
       }
       
-      // ...existing follower and following fetch functions...
+      /**
+       * Fetch a list of followers with pagination
+       */
+      async function fetchFollowers(afterCursor = null) {
+        try {
+          const params = new URLSearchParams();
+          if (afterCursor) params.append('after', afterCursor);
+          params.append('first', userBatchSize.toString());
+          
+          const response = await fetch(`/api/v1/users/${username}/followers?${params}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch followers: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return {
+            data: data.followers.data.map(item => ({
+              user: item.follow.user,
+              cursor: item.cursor
+            })),
+            meta: data.followers.meta
+          };
+        } catch (error) {
+          console.error('Error fetching followers:', error);
+          return { data: [], meta: { has_next_page: false } };
+        }
+      }
+      
+      /**
+       * Fetch a list of users the profile is following with pagination
+       */
+      async function fetchFollowing(afterCursor = null) {
+        try {
+          const params = new URLSearchParams();
+          if (afterCursor) params.append('after', afterCursor);
+          params.append('first', userBatchSize.toString());
+          
+          const response = await fetch(`/api/v1/users/${username}/following?${params}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch following: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return {
+            data: data.following.data.map(item => ({
+              user: item.follow.user,
+              cursor: item.cursor
+            })),
+            meta: data.following.meta
+          };
+        } catch (error) {
+          console.error('Error fetching following:', error);
+          return { data: [], meta: { has_next_page: false } };
+        }
+      }
       
       /**
        * Fetch the most recent follower
@@ -888,12 +1049,91 @@
             <div class="recent-follower-name">${follower.username}</div>
           `;
           recentFollowerEl.style.cursor = 'pointer';
+          
+          // Add click handler to visit follower's profile
+          recentFollowerEl.onclick = () => {
+            window.location.href = `https://websim.ai/@${follower.username}`;
+          };
+          
           return follower;
         } catch (error) {
           console.error('Error fetching recent follower:', error);
           const recentFollowerEl = document.getElementById('recent-follower');
           recentFollowerEl.innerHTML = `<div>Error loading follower</div>`;
           return null;
+        }
+      }
+      
+      /**
+       * Find the intersection of followers and following (friends)
+       */
+      async function getFriends() {
+        try {
+          const friendsGrid = document.getElementById('friends-grid');
+          friendsGrid.innerHTML = '';
+          
+          const friendsLoading = document.getElementById('friends-loading');
+          friendsLoading.style.display = 'block';
+          
+          // Initialize objects to store all followers and following
+          let allFollowers = {};
+          let allFollowing = {};
+          
+          // Fetch all followers
+          let followersAfter = null;
+          let hasMoreFollowers = true;
+          
+          while (hasMoreFollowers) {
+            const followers = await fetchFollowers(followersAfter);
+            followers.data.forEach(item => {
+              allFollowers[item.user.id] = item.user;
+            });
+            
+            hasMoreFollowers = followers.meta.has_next_page;
+            followersAfter = followers.meta.end_cursor;
+          }
+          
+          // Fetch all following
+          let followingAfter = null;
+          let hasMoreFollowing = true;
+          
+          while (hasMoreFollowing) {
+            const following = await fetchFollowing(followingAfter);
+            following.data.forEach(item => {
+              allFollowing[item.user.id] = item.user;
+            });
+            
+            hasMoreFollowing = following.meta.has_next_page;
+            followingAfter = following.meta.end_cursor;
+          }
+          
+          // Find intersection (friends)
+          let friends = [];
+          Object.keys(allFollowers).forEach(userId => {
+            if (allFollowing[userId]) {
+              friends.push(allFollowers[userId]);
+            }
+          });
+          
+          // Update friends count
+          document.getElementById('friends-count').innerHTML = formatNumber(friends.length);
+          
+          // Generate UI
+          friendsLoading.style.display = 'none';
+          
+          if (friends.length === 0) {
+            friendsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No mutual connections yet!</div>`;
+            return;
+          }
+          
+          friends.forEach(user => {
+            const card = createUserCard(user);
+            friendsGrid.appendChild(card);
+          });
+        } catch (error) {
+          console.error('Error loading friends:', error);
+          document.getElementById('friends-loading').style.display = 'none';
+          document.getElementById('friends-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading friends data</div>`;
         }
       }
       
@@ -978,6 +1218,92 @@
           return stats;
         } catch (error) {
           console.error('Error updating direct stats:', error);
+        }
+      }
+      
+      /**
+       * Load and display followers
+       */
+      async function loadMoreFollowers() {
+        try {
+          const followersGrid = document.getElementById('followers-grid');
+          const followersLoading = document.getElementById('followers-loading');
+          
+          followersLoading.style.display = 'block';
+          
+          const data = await fetchFollowers(followersAfterCursor);
+          
+          followersLoading.style.display = 'none';
+          
+          if (data.data.length === 0) {
+            if (followersGrid.children.length === 0) {
+              followersGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">No followers yet!</div>`;
+            }
+            return;
+          }
+          
+          data.data.forEach(item => {
+            const card = createUserCard(item.user);
+            followersGrid.appendChild(card);
+          });
+          
+          if (data.meta.has_next_page) {
+            followersAfterCursor = data.meta.end_cursor;
+            // Load more when scrolled to bottom
+            const scrollHandler = () => {
+              if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                window.removeEventListener('scroll', scrollHandler);
+                loadMoreFollowers();
+              }
+            };
+            window.addEventListener('scroll', scrollHandler);
+          }
+        } catch (error) {
+          console.error('Error loading followers:', error);
+          document.getElementById('followers-loading').style.display = 'none';
+        }
+      }
+      
+      /**
+       * Load and display following
+       */
+      async function loadMoreFollowing() {
+        try {
+          const followingGrid = document.getElementById('following-grid');
+          const followingLoading = document.getElementById('following-loading');
+          
+          followingLoading.style.display = 'block';
+          
+          const data = await fetchFollowing(followingAfterCursor);
+          
+          followingLoading.style.display = 'none';
+          
+          if (data.data.length === 0) {
+            if (followingGrid.children.length === 0) {
+              followingGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Not following anyone yet!</div>`;
+            }
+            return;
+          }
+          
+          data.data.forEach(item => {
+            const card = createUserCard(item.user);
+            followingGrid.appendChild(card);
+          });
+          
+          if (data.meta.has_next_page) {
+            followingAfterCursor = data.meta.end_cursor;
+            // Load more when scrolled to bottom
+            const scrollHandler = () => {
+              if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                window.removeEventListener('scroll', scrollHandler);
+                loadMoreFollowing();
+              }
+            };
+            window.addEventListener('scroll', scrollHandler);
+          }
+        } catch (error) {
+          console.error('Error loading following:', error);
+          document.getElementById('following-loading').style.display = 'none';
         }
       }
       
@@ -1081,8 +1407,6 @@
         document.getElementById('description').innerHTML = loadingText;
       }
       
-      // ...existing followers and following functions...
-      
       /**
        * Sort and display projects according to current sort criterion
        */
@@ -1135,7 +1459,7 @@
             this.src = 'https://images.websim.ai/avatar/anonymous';
           };
           
-          initBackground(user.avatar_url || '');
+          initSynthwaveBackground();
           
           // Update joined date
           const joinedEl = document.getElementById('joined-count');
@@ -1157,12 +1481,6 @@
           document.getElementById('followers-count').innerHTML = formatNumber(followersCount || 0);
           document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
           document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
-          
-          // Update iframe if needed
-          const iframe = document.querySelector('iframe');
-          if (iframe) {
-            iframe.src = `https://websim.ai/@${username}/my-projects`;
-          }
           
           // Reset project data
           projectsData = [];
@@ -1216,6 +1534,38 @@
               }
             });
           });
+          
+          // Set up search functionality
+          const searchInput = document.getElementById('user-search');
+          searchInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+              const newUsername = searchInput.value.trim();
+              if (newUsername && newUsername !== username) {
+                username = newUsername;
+                await initProfile();
+                searchInput.value = '';
+              }
+            }
+          });
+          
+          const searchToggle = document.getElementById('search-toggle');
+          searchToggle.addEventListener('click', async () => {
+            const newUsername = searchInput.value.trim();
+            if (newUsername && newUsername !== username) {
+              username = newUsername;
+              await initProfile();
+              searchInput.value = '';
+            }
+          });
+          
+          // Set up modal close
+          document.querySelector('.modal-close').addEventListener('click', () => {
+            document.querySelector('.modal-overlay').classList.remove('active');
+            document.querySelector('.modal').classList.remove('active');
+            setTimeout(() => {
+              document.querySelector('.modal iframe').src = '';
+            }, 300);
+          });
         } catch (error) {
           console.error('Error initializing profile:', error);
           document.getElementById('description').innerHTML = 'Error loading profile data.';
@@ -1251,12 +1601,6 @@
           
           // Scroll to top
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          
-          // Update iframe
-          const iframe = document.querySelector('iframe');
-          if (iframe) {
-            iframe.src = `https://websim.ai/@${user.username}`;
-          }
           
           // Reset data
           projectsData = [];
@@ -1299,11 +1643,11 @@
                   loading="lazy"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <div class="preview-image" 
-                  style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: #2a2a2a; color: #666;">
+                  style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
                No Preview Available
              </div>`
           : `<div class="preview-image" 
-                 style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: #2a2a2a; color: #666;">
+                 style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
                 No Preview
               </div>`;
         
@@ -1398,7 +1742,7 @@
           // Add latest project info
           if (sortedByDate.length > 0) {
             const latestProject = sortedByDate[0].project;
-            bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: #2196f3;">${latestProject.title || 'Untitled'}</a>`;
+            bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>`;
             
             const projectDate = new Date(latestProject.created_at).toLocaleDateString();
             if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
@@ -1410,13 +1754,13 @@
           // Add most viewed project info
           if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
             const mostViewedProject = sortedByViews[0].project;
-            bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: #2196f3;">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
+            bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
           }
           
           // Add most liked project info
           if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
             const mostLikedProject = sortedByLikes[0].project;
-            bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: #2196f3;">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
+            bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
           }
         }
         
@@ -1439,61 +1783,12 @@
         return bioText;
       }
       
-      // ===== BACKGROUND ANIMATION =====
-      
+      // ===== SYNTHWAVE BACKGROUND ANIMATION =====
       /**
-       * Floating image particle for background animation
+       * Initialize synthwave grid background
        */
-      class FloatingImage {
-        constructor(canvas, imgSrc, x, y) {
-          this.canvas = canvas;
-          this.ctx = canvas.getContext('2d');
-          this.x = x;
-          this.y = y;
-          this.size = particleBaseSize * (Math.random() * 0.5 + 0.75); // Vary size slightly
-          this.dx = (Math.random() - 0.5) * 2 * backgroundParticleSpeed;
-          this.dy = (Math.random() - 0.5) * backgroundParticleSpeed;
-          this.img = new Image();
-          this.img.src = imgSrc || 'https://images.websim.ai/avatar/anonymous';
-          this.img.onerror = () => {
-            this.img.src = 'https://images.websim.ai/avatar/anonymous';
-          };
-          this.opacity = particleOpacity;
-        }
-        
-        draw() {
-          if (!this.img.complete) return;
-          
-          this.ctx.save();
-          this.ctx.globalAlpha = this.opacity;
-          this.ctx.beginPath();
-          this.ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
-          this.ctx.clip();
-          this.ctx.drawImage(this.img, this.x, this.y, this.size, this.size);
-          this.ctx.restore();
-        }
-        
-        update() {
-          // Bounce off walls
-          if (this.x + this.size > this.canvas.width || this.x < 0) {
-            this.dx *= -1;
-          }
-          
-          if (this.y + this.size > this.canvas.height || this.y < 0) {
-            this.dy *= -1;
-          }
-          
-          // Move particle
-          this.x += this.dx;
-          this.y += this.dy;
-        }
-      }
-      
-      /**
-       * Initialize background animation
-       */
-      function initBackground(avatarUrl) {
-        const canvas = document.getElementById('animated-background');
+      function initSynthwaveBackground() {
+        const canvas = document.getElementById('grid-background');
         const ctx = canvas.getContext('2d');
         
         // Resize canvas to window size
@@ -1505,38 +1800,85 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
-        // Create floating images
-        const images = [];
-        for (let i = 0; i < backgroundParticleCount; i++) {
-          images.push(new FloatingImage(
-            canvas, 
-            avatarUrl, 
-            Math.random() * canvas.width, 
-            Math.random() * canvas.height
-          ));
-        }
+        // Animation variables
+        let offset = 0;
         
         // Animation loop
-        let animationId;
         function animate() {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           
-          images.forEach(img => {
-            img.update();
-            img.draw();
-          });
+          // Draw background gradient
+          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          gradient.addColorStop(0, '#120638');
+          gradient.addColorStop(0.5, '#2d1b69');
+          gradient.addColorStop(1, '#5a1a80');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           
-          animationId = requestAnimationFrame(animate);
+          // Draw sun
+          const sunRadius = synthSunSize / 2;
+          const sunY = canvas.height * gridHorizon;
+          ctx.beginPath();
+          ctx.arc(canvas.width / 2, sunY, sunRadius, 0, Math.PI * 2);
+          ctx.fillStyle = synthSunColor;
+          ctx.shadowColor = synthSunColor;
+          ctx.shadowBlur = 30;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          
+          // Draw horizontal grid lines
+          const horizonY = canvas.height * gridHorizon;
+          const gridSpacing = canvas.width / gridLineCount;
+          
+          // Reset shadows for grid
+          ctx.shadowColor = gridColorPrimary;
+          ctx.shadowBlur = gridGlowIntensity;
+          
+          // Vertical lines (perspective)
+          ctx.lineWidth = gridLineWidth;
+          
+          for (let i = 0; i <= gridLineCount; i++) {
+            const x = i * gridSpacing;
+            
+            // Primary lines
+            ctx.beginPath();
+            ctx.moveTo(x, horizonY);
+            ctx.lineTo(x, canvas.height);
+            ctx.strokeStyle = gridColorPrimary;
+            ctx.stroke();
+          }
+          
+          // Horizontal lines with animation
+          const horizontalLines = 20;
+          const animatedOffset = (offset % gridSpacing);
+          
+          ctx.shadowColor = gridColorSecondary;
+          
+          for (let i = 0; i <= horizontalLines; i++) {
+            const progress = i / horizontalLines;
+            const y = horizonY + (canvas.height - horizonY) * progress;
+            
+            // Calculate perspective width
+            const perspectiveWidth = progress * canvas.width * 0.8;
+            const xStart = (canvas.width - perspectiveWidth) / 2;
+            const xEnd = xStart + perspectiveWidth;
+            
+            ctx.beginPath();
+            ctx.moveTo(xStart, y);
+            ctx.lineTo(xEnd, y);
+            ctx.strokeStyle = gridColorSecondary;
+            ctx.stroke();
+          }
+          
+          // Update animation
+          offset += gridSpeed / 60; // Speed adjusted for 60fps
+          
+          // Continue animation
+          requestAnimationFrame(animate);
         }
         
         // Start animation
         animate();
-        
-        // Store animation ID in window for potential cleanup
-        if (window.backgroundAnimationId) {
-          cancelAnimationFrame(window.backgroundAnimationId);
-        }
-        window.backgroundAnimationId = animationId;
       }
       
       // Initialize the profile page
@@ -1547,9 +1889,17 @@
         initProfile();
       });
       
-      // ===== EVENT LISTENERS =====
-      
-      // ...existing event listeners...
+      // Set up search functionality
+      document.getElementById('user-search').addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+          const newUsername = e.target.value.trim();
+          if (newUsername && newUsername !== username) {
+            username = newUsername;
+            await initProfile();
+            e.target.value = '';
+          }
+        }
+      });
     </script>
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
