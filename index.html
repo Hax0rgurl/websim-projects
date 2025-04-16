@@ -3,7 +3,7 @@
   <head>
     <base href="abandonedmuse" />
     <title>User Profile Viewer</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
   </head>
   <body>
     <canvas id="grid-background"></canvas>
@@ -17,7 +17,7 @@
           <img class="avatar" id="avatar" alt="Profile avatar">
           <div class="profile-info">
             <h1>
-              <span id="username" contenteditable="true"></span>
+              <span id="username" contenteditable="true" style="outline: none; border-bottom: 1px dashed var(--neon-secondary); padding: 0 4px;"></span>
               <span class="username-hint">← You can edit the name!</span>
             </h1>
             <p id="description"></p>
@@ -33,7 +33,7 @@
       </div>
       <div class="stats">
         <div class="stat-card">
-          <h3>🌐 Projects</h3>
+          <h3><span id="project-count-label">🌐 Projects</span></h3>
           <div class="value" id="sites-count"><div class="loading-spinner"></div></div>
         </div>
         <div class="stat-card">
@@ -81,10 +81,18 @@
           <button class="view-button" data-view="friends">Friends</button>
         </div>
         <div id="projects-view" class="view-content">
-          <div class="sort-controls">
-            <button class="sort-button active" data-sort="recent">Recent</button>
-            <button class="sort-button" data-sort="views">Most Viewed</button>
-            <button class="sort-button" data-sort="likes">Most Liked</button>
+          <div class="controls-row">
+             <div class="sort-controls project-sort-controls">
+               <button class="sort-button active" data-sort="recent">Recent</button>
+               <button class="sort-button" data-sort="views">Most Viewed</button>
+               <button class="sort-button" data-sort="likes">Most Liked</button>
+             </div>
+             <div class="visibility-controls" id="visibility-filter-controls" style="display: none;">
+                <span style="margin-right: 0.5rem; color: var(--text-secondary);">Show:</span>
+                <button class="visibility-button" data-filter="public">Public</button>
+                <button class="visibility-button" data-filter="private">Private</button>
+                <button class="visibility-button" data-filter="all">All</button>
+             </div>
           </div>
           <div class="grid" id="projects-grid"></div>
           <div class="loading-container" id="projects-loading">
@@ -119,17 +127,18 @@
         <a class="open-new-tab" target="_blank">↗️ Open in new tab</a>
       </div>
     </div>
-    
-    <script src="config.js"></script>
-    <script src="services/utils.js"></script>
-    <script src="services/api.js"></script>
-    <script src="services/stats.js"></script>
-    <script src="services/ui.js"></script>
-    <script src="services/background.js"></script>
-    <script src="controllers/data.js"></script>
-    <script src="controllers/profile.js"></script>
-    <script src="app.js"></script>
+
+    <!-- JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/background.js"></script>
+    <script src="js/dataLoaders.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/listeners.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/main.js"></script>
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
