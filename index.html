@@ -717,6 +717,15 @@
       /* @tweakable Default username to load on page load */
       const defaultUsername = 'abandonedmuse';
       
+      /* @tweakable Minimum quality rating when likes exist */
+      const minimumRatingWithLikes = 1;
+      /* @tweakable Default quality rating when likes exist but no views */
+      const defaultRatingForLikesNoViews = 5;
+      /* @tweakable Default quality rating when views exist but no likes */
+      const defaultRatingForViewsNoLikes = 1;
+      /* @tweakable Default quality rating when neither views nor likes exist */
+      const defaultRatingForNoActivity = 3;
+      
       // State variables
       let username = defaultUsername;
       let projectsAfterCursor = null;
@@ -783,7 +792,8 @@
           
           values.sort((a, b) => b - a);
           const position = values.findIndex(v => v <= value) + 1;
-          return Math.round((1 - (position / values.length)) * 100);
+          // Highest value maps to 100%, lowest maps proportionally
+          return Math.round(((values.length - position + 1) / values.length) * 100);
         } catch (error) {
           console.error('Error calculating percentile:', error);
           return null;
@@ -796,22 +806,18 @@
       async function updateStatWithPercentile(elementId, value, statName) {
         const element = document.getElementById(elementId);
         if (!element) return;
-        
         if (isNaN(value) || value === undefined || value === null) {
           element.innerHTML = '0';
           return;
         }
-        
+        const suffix = statName === 'popularity' ? '/10' : statName === 'rating' ? '/5' : '';
+        // For raw counts (like unposted) or when percentiles disabled
+        if (statName === 'unposted' || !enablePercentiles) {
+          element.innerHTML = `${formatNumber(value)}${suffix}`;
+          return;
+        }
         try {
           const percentile = await calculatePercentile(value, statName);
-          let suffix = "";
-          
-          if (statName === 'popularity') {
-            suffix = "/10";
-          } else if (statName === 'rating') {
-            suffix = "/5";
-          }
-          
           if (percentile === null || isNaN(percentile)) {
             element.innerHTML = `${formatNumber(value)}${suffix}`;
           } else {
@@ -824,7 +830,7 @@
           }
         } catch (error) {
           console.error(`Error updating stat ${elementId}:`, error);
-          element.innerHTML = `${formatNumber(value) || '0'}`;
+          element.innerHTML = `${formatNumber(value)}${suffix}`;
         }
       }
       
@@ -1207,7 +1213,6 @@
           if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
             const viewsPerLike = stats.total_views / stats.total_likes;
             
-            /* Fix: Find the highest score where the views per like is less than the threshold */
             for (const threshold of ratingThresholds) {
               if (viewsPerLike <= threshold.viewsPerLike) {
                 rating = threshold.score;
@@ -1215,25 +1220,15 @@
               }
             }
             
-            /* @tweakable Minimum quality rating when likes exist */
-            const minimumRatingWithLikes = 1;
-            
-            // Ensure a minimum rating if there are likes
             if (rating === 0) {
               rating = minimumRatingWithLikes;
             }
           } else if ((stats.total_likes || 0) > 0) {
-            /* @tweakable Default rating when likes exist but no views */
-            const defaultRatingForLikesNoViews = 5; 
-            rating = defaultRatingForLikesNoViews; // Max rating if likes but no views
+            rating = defaultRatingForLikesNoViews;
           } else if ((stats.total_views || 0) > 0) {
-            /* @tweakable Default rating when views exist but no likes */
-            const defaultRatingForViewsNoLikes = 1;
-            rating = defaultRatingForViewsNoLikes; // Min rating if views but no likes
+            rating = defaultRatingForViewsNoLikes;
           } else {
-            /* @tweakable Default rating when neither views nor likes exist */
-            const defaultRatingForNoActivity = 3;
-            rating = defaultRatingForNoActivity; // Neutral rating for no activity
+            rating = defaultRatingForNoActivity;
           }
           
           // Update the stats display
