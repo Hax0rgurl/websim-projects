@@ -783,6 +783,21 @@
       /* @tweakable Show own projects regardless of visibility */
       const showAllOwnProjects = true;
       
+      /* @tweakable Debug mode - logs additional information to console */
+      const debugMode = true;
+      
+      /* @tweakable Show count of projects that couldn't be loaded due to visibility */
+      const showMissingProjectsCount = true;
+      
+      /* @tweakable Private projects background opacity (0.0-1.0) */
+      const privateProjectBgOpacity = 0.8;
+      
+      /* @tweakable Private projects indicator position (top-right, top-left, bottom-right, bottom-left) */
+      const privateProjectIndicatorPosition = 'top-right';
+      
+      /* @tweakable Neon pulse effect intensity for private projects (0.0-1.0) */
+      const privateProjectNeonPulseIntensity = 0.8;
+      
       // State variables
       let username = defaultUsername;
       let projectsAfterCursor = null;
@@ -988,12 +1003,18 @@
           params.append('first', projectBatchSize.toString());
           
           // Only filter by posted status if we're not showing private projects
-          // or if we're viewing someone else's profile and not allowed to see their private projects
-          if (!isShowingPrivate || (!isViewingOwnProfile() && !showOtherUsersPrivateProjects)) {
+          // Fixed: Don't add the posted parameter at all when showing private projects
+          if (!isShowingPrivate) {
             params.append('posted', 'true');
           }
           
           params.append('sort_by', 'updated_at');
+          
+          if (debugMode) {
+            console.log(`Fetching projects with params:`, Object.fromEntries(params));
+            console.log(`isShowingPrivate: ${isShowingPrivate}`);
+            console.log(`isViewingOwnProfile: ${isViewingOwnProfile()}`);
+          }
           
           const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
           if (!response.ok) {
@@ -1001,6 +1022,12 @@
           }
           
           const data = await response.json();
+          
+          if (debugMode) {
+            console.log(`Fetched ${data.projects.data.length} projects`);
+            console.log(`Has next page: ${data.projects.meta.has_next_page}`);
+          }
+          
           return {
             data: data.projects.data.map(item => ({
               project: item.project,
@@ -1566,8 +1593,15 @@
             showPrivateButton.style.display = 'inline-block';
             showPrivateButton.textContent = isShowingPrivate ? 'Show Public Only' : 'Show Private';
             showPrivateButton.classList.toggle('active', isShowingPrivate);
+            
+            if (debugMode) {
+              console.log(`Visibility button visible: ${isShowingPrivate ? 'Showing Private' : 'Showing Public Only'}`);
+            }
           } else {
             showPrivateButton.style.display = 'none';
+            if (debugMode) {
+              console.log(`Visibility button hidden - not own profile`);
+            }
           }
           
           // Fetch all data concurrently
@@ -1595,12 +1629,16 @@
             });
           });
           
-          // Set up event listener for visibility toggle
+          // Set up event listener for visibility toggle - FIXED
           const visibilityToggle = document.getElementById('show-private');
           visibilityToggle.addEventListener('click', async () => {
             isShowingPrivate = !isShowingPrivate;
             visibilityToggle.textContent = isShowingPrivate ? 'Show Public Only' : 'Show Private';
             visibilityToggle.classList.toggle('active', isShowingPrivate);
+            
+            if (debugMode) {
+              console.log(`Visibility toggled to: ${isShowingPrivate ? 'Private' : 'Public Only'}`);
+            }
             
             // Reset project data and refetch
             projectsData = [];
@@ -1736,6 +1774,12 @@
         // Set border color based on visibility
         if (project.visibility === 'private') {
           card.style.borderColor = privateProjectBorderColor;
+          card.style.backgroundColor = `rgba(16, 9, 44, ${privateProjectBgOpacity})`;
+          
+          // Add pulsing effect for private projects
+          if (privateProjectNeonPulseIntensity > 0) {
+            card.style.animation = `pulse ${2/privateProjectNeonPulseIntensity}s infinite`;
+          }
         } else if (project.visibility === 'unlisted') {
           card.style.borderColor = unlistedProjectBorderColor;
         }
@@ -1822,7 +1866,11 @@
        * Check if we're viewing our own profile
        */
       function isViewingOwnProfile() {
-        return currentUser && currentUser.username === username;
+        const isOwn = currentUser && currentUser.username === username;
+        if (debugMode) {
+          console.log(`isViewingOwnProfile check - currentUser: ${currentUser?.username}, profile: ${username}, result: ${isOwn}`);
+        }
+        return isOwn;
       }
       
       /**
@@ -2018,11 +2066,16 @@
         // Get current user first, before loading the profile
         try {
           currentUser = await window.websim.getUser();
-          console.log("Current user:", currentUser);
+          if (debugMode) {
+            console.log("Current user:", currentUser);
+          }
           
           // If we're viewing our own profile, we can enable private projects by default
           if (currentUser && currentUser.username === username && showAllOwnProjects) {
             isShowingPrivate = true;
+            if (debugMode) {
+              console.log("Auto-enabling private projects for own profile");
+            }
           }
         } catch (error) {
           console.error("Error getting current user:", error);
