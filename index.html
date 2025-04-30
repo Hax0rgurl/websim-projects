@@ -783,20 +783,23 @@
       /* @tweakable Show own projects regardless of visibility */
       const showAllOwnProjects = true;
       
-      /* @tweakable Debug mode - logs additional information to console */
-      const debugMode = true;
+      /* @tweakable Debug mode - log information about visibility settings and API calls */
+      const debugMode = false;
       
-      /* @tweakable Show count of projects that couldn't be loaded due to visibility */
-      const showMissingProjectsCount = true;
+      /* @tweakable Include private projects in stats calculations */
+      const includePrivateInStats = true;
       
-      /* @tweakable Private projects background opacity (0.0-1.0) */
-      const privateProjectBgOpacity = 0.8;
+      /* @tweakable Private toggle text when showing private */
+      const privateToggleShownText = "Show Public Only";
       
-      /* @tweakable Private projects indicator position (top-right, top-left, bottom-right, bottom-left) */
-      const privateProjectIndicatorPosition = 'top-right';
+      /* @tweakable Private toggle text when showing public */
+      const privateToggleHiddenText = "Show Private";
       
-      /* @tweakable Neon pulse effect intensity for private projects (0.0-1.0) */
-      const privateProjectNeonPulseIntensity = 0.8;
+      /* @tweakable Private filter parameter name for API */
+      const privateFilterParam = "posted";
+      
+      /* @tweakable Delay in ms before refreshing projects after toggle */
+      const toggleRefreshDelay = 100;
       
       // State variables
       let username = defaultUsername;
@@ -1002,21 +1005,22 @@
           if (afterCursor) params.append('after', afterCursor);
           params.append('first', projectBatchSize.toString());
           
-          // Only filter by posted status if we're not showing private projects
-          // Fixed: Don't add the posted parameter at all when showing private projects
-          if (!isShowingPrivate) {
-            params.append('posted', 'true');
+          // Determine if we should filter out private projects
+          const shouldFilterPrivate = !isShowingPrivate || (!isViewingOwnProfile() && !showOtherUsersPrivateProjects);
+          
+          if (shouldFilterPrivate) {
+            params.append(privateFilterParam, 'true');
+            if (debugMode) console.log("Filtering to show only public projects");
+          } else {
+            if (debugMode) console.log("Showing all projects including private");
           }
           
           params.append('sort_by', 'updated_at');
           
-          if (debugMode) {
-            console.log(`Fetching projects with params:`, Object.fromEntries(params));
-            console.log(`isShowingPrivate: ${isShowingPrivate}`);
-            console.log(`isViewingOwnProfile: ${isViewingOwnProfile()}`);
-          }
+          const requestUrl = `/api/v1/users/${username}/projects?${params}`;
+          if (debugMode) console.log("Fetching projects:", requestUrl);
           
-          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+          const response = await fetch(requestUrl);
           if (!response.ok) {
             throw new Error(`Failed to fetch projects: ${response.status}`);
           }
@@ -1024,8 +1028,8 @@
           const data = await response.json();
           
           if (debugMode) {
-            console.log(`Fetched ${data.projects.data.length} projects`);
-            console.log(`Has next page: ${data.projects.meta.has_next_page}`);
+            console.log(`Fetched ${data.projects.data.length} projects, has_next_page: ${data.projects.meta.has_next_page}`);
+            console.log("Sample project visibility:", data.projects.data[0]?.project?.visibility);
           }
           
           return {
@@ -1413,7 +1417,11 @@
        */
       async function loadMoreProjects() {
         try {
-          if (isLoading) return;
+          if (isLoading) {
+            if (debugMode) console.log("Already loading projects, ignoring request");
+            return;
+          }
+          
           isLoading = true;
           
           const projectLoadingEl = document.getElementById('projects-loading');
@@ -1421,6 +1429,13 @@
           
           projectLoadingEl.style.display = 'block';
           loadMoreBtn.style.display = 'none';
+          
+          if (debugMode) {
+            console.log("Loading projects with isShowingPrivate:", isShowingPrivate);
+            console.log("Current user:", currentUser?.username);
+            console.log("Profile username:", username);
+            console.log("Is own profile:", isViewingOwnProfile());
+          }
           
           const data = await fetchProjects(projectsAfterCursor);
           projectsData = projectsData.concat(data.data);
@@ -1588,21 +1603,7 @@
           projectsAfterCursor = null;
           
           // Update visibility toggle button state
-          const showPrivateButton = document.getElementById('show-private');
-          if (isViewingOwnProfile() || showOtherUsersPrivateProjects) {
-            showPrivateButton.style.display = 'inline-block';
-            showPrivateButton.textContent = isShowingPrivate ? 'Show Public Only' : 'Show Private';
-            showPrivateButton.classList.toggle('active', isShowingPrivate);
-            
-            if (debugMode) {
-              console.log(`Visibility button visible: ${isShowingPrivate ? 'Showing Private' : 'Showing Public Only'}`);
-            }
-          } else {
-            showPrivateButton.style.display = 'none';
-            if (debugMode) {
-              console.log(`Visibility button hidden - not own profile`);
-            }
-          }
+          updatePrivateToggleState();
           
           // Fetch all data concurrently
           Promise.allSettled([
@@ -1629,23 +1630,8 @@
             });
           });
           
-          // Set up event listener for visibility toggle - FIXED
-          const visibilityToggle = document.getElementById('show-private');
-          visibilityToggle.addEventListener('click', async () => {
-            isShowingPrivate = !isShowingPrivate;
-            visibilityToggle.textContent = isShowingPrivate ? 'Show Public Only' : 'Show Private';
-            visibilityToggle.classList.toggle('active', isShowingPrivate);
-            
-            if (debugMode) {
-              console.log(`Visibility toggled to: ${isShowingPrivate ? 'Private' : 'Public Only'}`);
-            }
-            
-            // Reset project data and refetch
-            projectsData = [];
-            projectsAfterCursor = null;
-            document.getElementById('projects-grid').innerHTML = '';
-            await loadMoreProjects();
-          });
+          // Set up event listener for visibility toggle
+          setupPrivateToggle();
           
           // Set up event listeners for view buttons
           document.querySelectorAll('.view-button').forEach(button => {
@@ -1706,6 +1692,78 @@
           console.error('Error initializing profile:', error);
           document.getElementById('description').innerHTML = 'Error loading profile data.';
         }
+      }
+      
+      /**
+       * Update the private toggle button state based on current visibility setting
+       * @tweakable Controls appearance and behavior of the private toggle button
+       */
+      function updatePrivateToggleState() {
+        const showPrivateButton = document.getElementById('show-private');
+        
+        // Only show the toggle button if we're viewing our own profile or allowed to see others' private projects
+        if (isViewingOwnProfile() || showOtherUsersPrivateProjects) {
+          showPrivateButton.style.display = 'inline-block';
+          
+          // Update button text based on current state
+          showPrivateButton.textContent = isShowingPrivate ? privateToggleShownText : privateToggleHiddenText;
+          
+          // Update button visual state
+          showPrivateButton.classList.toggle('active', isShowingPrivate);
+          
+          if (debugMode) {
+            console.log("Private toggle updated:", {
+              text: showPrivateButton.textContent,
+              active: isShowingPrivate,
+              visible: true
+            });
+          }
+        } else {
+          // Hide the button if we're not viewing our own profile
+          showPrivateButton.style.display = 'none';
+          
+          if (debugMode) {
+            console.log("Private toggle hidden (not own profile)");
+          }
+        }
+      }
+      
+      /**
+       * Set up event listener for the private toggle button
+       * @tweakable Controls behavior when toggling private project visibility
+       */
+      function setupPrivateToggle() {
+        const visibilityToggle = document.getElementById('show-private');
+        
+        // Remove any existing event listeners by cloning and replacing the element
+        const newVisibilityToggle = visibilityToggle.cloneNode(true);
+        visibilityToggle.parentNode.replaceChild(newVisibilityToggle, visibilityToggle);
+        
+        // Add the new event listener
+        newVisibilityToggle.addEventListener('click', async () => {
+          // Toggle the visibility state
+          isShowingPrivate = !isShowingPrivate;
+          
+          if (debugMode) {
+            console.log("Private toggle clicked, new isShowingPrivate:", isShowingPrivate);
+          }
+          
+          // Update the toggle button appearance
+          updatePrivateToggleState();
+          
+          // Reset project data
+          projectsData = [];
+          projectsAfterCursor = null;
+          document.getElementById('projects-grid').innerHTML = '';
+          
+          // Show loading indicator
+          document.getElementById('projects-loading').style.display = 'block';
+          
+          // Slight delay to ensure UI updates before fetching new data
+          setTimeout(async () => {
+            await loadMoreProjects();
+          }, toggleRefreshDelay);
+        });
       }
       
       // ===== UI CREATION FUNCTIONS =====
@@ -1774,12 +1832,6 @@
         // Set border color based on visibility
         if (project.visibility === 'private') {
           card.style.borderColor = privateProjectBorderColor;
-          card.style.backgroundColor = `rgba(16, 9, 44, ${privateProjectBgOpacity})`;
-          
-          // Add pulsing effect for private projects
-          if (privateProjectNeonPulseIntensity > 0) {
-            card.style.animation = `pulse ${2/privateProjectNeonPulseIntensity}s infinite`;
-          }
         } else if (project.visibility === 'unlisted') {
           card.style.borderColor = unlistedProjectBorderColor;
         }
@@ -1864,13 +1916,17 @@
       
       /**
        * Check if we're viewing our own profile
+       * @tweakable The logic for determining if the current user owns the profile
        */
       function isViewingOwnProfile() {
-        const isOwn = currentUser && currentUser.username === username;
         if (debugMode) {
-          console.log(`isViewingOwnProfile check - currentUser: ${currentUser?.username}, profile: ${username}, result: ${isOwn}`);
+          console.log("isViewingOwnProfile check:", {
+            currentUser: currentUser?.username,
+            profileUsername: username,
+            result: !!(currentUser && currentUser.username === username)
+          });
         }
-        return isOwn;
+        return currentUser && currentUser.username === username;
       }
       
       /**
@@ -2066,15 +2122,13 @@
         // Get current user first, before loading the profile
         try {
           currentUser = await window.websim.getUser();
-          if (debugMode) {
-            console.log("Current user:", currentUser);
-          }
+          console.log("Current user:", currentUser);
           
           // If we're viewing our own profile, we can enable private projects by default
           if (currentUser && currentUser.username === username && showAllOwnProjects) {
             isShowingPrivate = true;
             if (debugMode) {
-              console.log("Auto-enabling private projects for own profile");
+              console.log("Showing private projects by default (own profile)");
             }
           }
         } catch (error) {
