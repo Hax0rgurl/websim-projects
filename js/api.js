@@ -64,17 +64,19 @@ async function fetchProjects(afterCursor = null) {
 
     const viewingOwn = isViewingOwnProfile();
 
-    // If this is NOT owner's "all" view, fetch only posted projects
-    if (!(viewingOwn && currentVisibilityFilter === 'all')) {
+    // Determine posted filter:
+    // - non-owner or 'public' filter: fetch only posted (public) projects
+    // - owner & 'private' or 'all': skip 'posted' to include private/unposted
+    if (!viewingOwn || currentVisibilityFilter === 'public') {
       params.append('posted', 'true');
       if (debugMode) {
-        console.log(`[API] Fetching ${viewingOwn ? 'OWN' : 'OTHER'} profile - posted projects only (posted=true)`);
+        console.log(`[API] Fetching ${viewingOwn ? 'OWN' : 'OTHER'} profile - posted projects (posted=true) with filter='${currentVisibilityFilter}'`);
       }
     } else {
-      if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'posted' filter)");
+      if (debugMode) {
+        console.log(`[API] Fetching OWN profile - include private/unposted for filter='${currentVisibilityFilter}'`);
+      }
     }
-
-    params.append('sort_by', 'updated_at'); // Keep sorting by update time for pagination consistency
 
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
@@ -83,16 +85,9 @@ async function fetchProjects(afterCursor = null) {
     if (!response.ok) {
       throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText} (${requestUrl})`);
     }
-
     const data = await response.json();
 
-    if (debugMode) {
-      console.log(`Fetched ${data.projects.data.length} projects for filter '${currentVisibilityFilter}', has_next_page: ${data.projects.meta.has_next_page}`);
-      // Log sample project visibility for debugging
-      data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}`));
-    }
-
-    // Filter out potential null projects just in case API returns partial errors
+    // Filter out potential null or invalid entries
     const validProjectData = data.projects.data.filter(item => item && item.project);
 
     return {
@@ -107,7 +102,8 @@ async function fetchProjects(afterCursor = null) {
   } catch (error) {
     console.error('Error fetching projects:', error);
     document.getElementById('projects-loading').style.display = 'none';
-    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects. Please try refreshing.</div>';
+    document.getElementById('projects-grid').innerHTML =
+      '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects. Please try refreshing.</div>';
     return { data: [], meta: { has_next_page: false } };
   }
 }

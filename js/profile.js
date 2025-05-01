@@ -1,4 +1,4 @@
-// ===== Profile Initialization (moved from js/main.js) =====
+// ===== Profile Initialization =====
 
 async function initProfile() {
   try {
@@ -39,6 +39,15 @@ async function initProfile() {
       return;
     }
     window.currentUserProfile = user;
+
+    // --- Determine visibility filter for this profile view ---
+    if (isViewingOwnProfile()) {
+      currentVisibilityFilter = initialOwnVisibilityFilter;    // usually 'all'
+    } else {
+      currentVisibilityFilter = initialOtherVisibilityFilter;  // usually 'public'
+    }
+    // Let the UI adjust controls once projects load
+    // (loadMoreProjects will call updateVisibilityFilterButtons after data arrives)
 
     // --- Update Header ---
     document.getElementById('username').textContent = user.username;
