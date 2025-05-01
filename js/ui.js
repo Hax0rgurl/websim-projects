@@ -4,48 +4,40 @@
  * Create a user card element for followers/following/friends views
  */
 function createUserCard(user) {
-  if (!user) return document.createElement('div');
-  
-  const card = document.createElement('a');
-  card.href = `https://websim.ai/@${user.username}`;
+  if (!user || !user.username) return document.createElement('div'); // Basic safety check
+
+  const card = document.createElement('div'); // Use div instead of <a> initially
   card.className = 'user-card';
+  card.dataset.username = user.username; // Store username for click handler
+
   card.innerHTML = `
-    <img class="user-avatar" src="${user.avatar_url || ''}"
+    <img class="user-avatar" src="${user.avatar_url || `https://images.websim.ai/avatar/${user.username}`}"
          alt="${user.username}'s avatar"
          style="width: ${userAvatarSize}px; height: ${userAvatarSize}px;"
          onerror="this.src='https://images.websim.ai/avatar/anonymous'">
     <div class="user-name">${user.username}</div>
   `;
 
+  // Add click listener to navigate within the app
   card.addEventListener('click', async (e) => {
     e.preventDefault();
+    const targetUsername = card.dataset.username;
 
-    // Set username display
-    const usernameEl = document.getElementById('username');
-    usernameEl.textContent = user.username;
-    document.querySelector('.username-hint').classList.add('hidden');
+    if (targetUsername && targetUsername !== username) {
+        // Update the global username state
+        username = targetUsername;
 
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Update the search input visually (optional)
+        document.getElementById('user-search').value = username;
 
-    // Reset data
-    projectsData = [];
-    projectsAfterCursor = null;
-    followersAfterCursor = null;
-    followingAfterCursor = null;
+        // Scroll to top for new profile load
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Clear all grids
-    document.getElementById('projects-grid').innerHTML = '';
-    document.getElementById('followers-grid').innerHTML = '';
-    document.getElementById('following-grid').innerHTML = '';
-    document.getElementById('friends-grid').innerHTML = '';
-
-    // Reset stats displays
-    resetStatsToLoading();
-
-    // Update current username and initialize new profile
-    username = user.username;
-    await initProfile();
+        // Initiate the profile load process
+        await initProfile(); // initProfile handles resets and loading
+    } else {
+         if (debugMode) console.log("Clicked on current user's card, no navigation needed.");
+    }
   });
 
   return card;
@@ -55,17 +47,21 @@ function createUserCard(user) {
  * Create a project card element for projects view
  */
 function createProjectCard(project, project_revision, site) {
-  if (!project) return document.createElement('div');
+  if (!project || !project.id) {
+      if (debugMode) console.warn("Attempted to create card for invalid project:", project);
+      return document.createElement('div'); // Return empty div if project data is invalid
+  }
 
   const card = document.createElement('div');
   card.className = 'card';
-  card.style.position = 'relative';
+  card.style.position = 'relative'; // Needed for absolute positioning of indicator
 
-  // Set border color based on visibility
-  let borderColor = publicProjectBorderColor; // Default to public color
-  let visibilityText = publicProjectText;
+  // Determine border color and visibility text based on project.visibility
+  let borderColor = publicProjectBorderColor; // Default
+  let visibilityText = publicProjectText; // Default
+  const projectVisibility = project.visibility || 'public'; // Default to public if undefined
 
-  switch (project.visibility) {
+  switch (projectVisibility) {
     case 'private':
       borderColor = privateProjectBorderColor;
       visibilityText = privateProjectText;
@@ -75,44 +71,47 @@ function createProjectCard(project, project_revision, site) {
       visibilityText = unlistedProjectText;
       break;
     case 'public':
-      // borderColor remains publicProjectBorderColor
+      borderColor = publicProjectBorderColor;
       visibilityText = publicProjectText;
       break;
     default:
-      // Keep default border if visibility is unknown/null
-      visibilityText = 'UNKNOWN'; // Should not happen often
+       if (debugMode) console.warn(`Unknown project visibility: ${projectVisibility} for project ${project.id}`);
+       visibilityText = projectVisibility.toUpperCase(); // Show the unknown status
       break;
   }
   card.style.borderColor = borderColor;
+  card.style.borderWidth = 'var(--neon-border-width)'; // Ensure border width is applied
+  card.style.borderStyle = 'solid';
 
   // Create preview image or placeholder
-  const previewHtml = site
-    ? `<img class="preview-image"
-            src="https://images.websim.ai/v1/site/${site.id}/600"
-            alt="Preview of ${project.title || 'Untitled Project'}"
-            style="height: ${projectPreviewHeight}px;"
-            loading="lazy"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-       <div class="preview-image placeholder"
-            style="height: ${projectPreviewHeight}px; display: none;">
-         No Preview Available
-       </div>`
-    : `<div class="preview-image placeholder"
-           style="height: ${projectPreviewHeight}px; display: flex;">
-          No Site Generated
-        </div>`;
+   const previewImageUrl = site?.id ? `https://images.websim.ai/v1/site/${site.id}/600` : null;
+   const placeholderText = site?.id ? 'Preview Unavailable' : 'No Site Generated';
+   const projectTitle = project.title || 'Untitled Project';
 
-  // Add visibility indicator if enabled
+   const previewHtml = previewImageUrl
+     ? `<img class="preview-image"
+             src="${previewImageUrl}"
+             alt="Preview of ${projectTitle}"
+             style="height: ${projectPreviewHeight}px;"
+             loading="lazy"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="preview-image placeholder error-placeholder"
+             style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: var(--text-secondary);">
+          ${placeholderText}
+        </div>`
+     : `<div class="preview-image placeholder no-site-placeholder"
+            style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: var(--text-secondary);">
+           ${placeholderText}
+         </div>`;
+
+  // Add visibility indicator only for non-public projects when
   let visibilityIndicator = '';
-  // Only show indicator for non-public projects, or always if configured
-  if (showVisibilityIndicator && project.visibility !== 'public') {
-      // Style the indicator based on visibility
-      let indicatorColor = borderColor; // Match border color
-      visibilityIndicator = `<div class="project-visibility-indicator" style="color: ${indicatorColor}; border-color: ${indicatorColor}; box-shadow: 0 0 5px ${indicatorColor};">
-        ${visibilityText}
-      </div>`;
+  if (projectVisibility !== 'public' && showVisibilityIndicator) {
+    let indicatorColor = borderColor; // Match border color
+    visibilityIndicator = `<div class="project-visibility-indicator" style="color: ${indicatorColor}; border-color: ${indicatorColor}; box-shadow: 0 0 5px ${indicatorColor};">
+      ${visibilityText}
+    </div>`;
   }
-
 
   card.innerHTML = `
     ${visibilityIndicator}
