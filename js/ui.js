@@ -178,25 +178,27 @@ function sortProjects() {
 
     if (!projectsData || projectsData.length === 0) {
         // Display a message if no projects match the current filter
-        let message = `No projects found for the current filter (${currentVisibilityFilter}).`;
-        if (currentVisibilityFilter === 'private' && isViewingOwnProfile()) message = "You have no private projects.";
-        else if (currentVisibilityFilter === 'private' && !isViewingOwnProfile()) message = "Cannot view private projects for other users.";
+        let message = "No projects found.";
+        if (currentVisibilityFilter === 'private') message = "No private projects found.";
         else if (currentVisibilityFilter === 'public') message = "No public projects found.";
-        else if (currentVisibilityFilter === 'all' && isViewingOwnProfile()) message = "No projects found.";
-         else if (currentVisibilityFilter === 'all' && !isViewingOwnProfile()) message = "No public projects found."; // Should default to public anyway
 
-        if(debugMode) console.log(`[sortProjects] No projects in projectsData for filter '${currentVisibilityFilter}'. Displaying message: ${message}`);
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;
     }
 
-     if(debugMode) console.log(`[sortProjects] Sorting and rendering ${projectsData.length} projects. Sort: ${currentSort}, Filter: ${currentVisibilityFilter}`);
-
     let sortedProjects = [...projectsData];
+
+    // Apply visibility filter (public / private / all)
+    if (currentVisibilityFilter === 'public') {
+      sortedProjects = sortedProjects.filter(p => p.project.visibility === 'public');
+    } else if (currentVisibilityFilter === 'private') {
+      sortedProjects = sortedProjects.filter(p => p.project.visibility === 'private');
+    }
 
     // Filter out any potential null/invalid project entries before sorting
     sortedProjects = sortedProjects.filter(p => p && p.project && p.project.stats);
 
+    // Now sort by the chosen criterion
     switch (currentSort) {
       case 'views':
         sortedProjects.sort((a, b) => (b.project.stats.views || 0) - (a.project.stats.views || 0));
@@ -208,8 +210,8 @@ function sortProjects() {
       default:
         // Sort by creation date, handling potential invalid dates
         sortedProjects.sort((a, b) => {
-            const dateA = a.project.created_at ? new Date(a.project.created_at).getTime() : 0;
-            const dateB = b.project.created_at ? new Date(b.project.created_at).getTime() : 0;
+            const dateA = a.project.created_at ? new Date(a.project.created_at) : 0;
+            const dateB = b.project.created_at ? new Date(b.project.created_at) : 0;
             // Ensure valid dates are compared correctly
             if (isNaN(dateA) && isNaN(dateB)) return 0;
             if (isNaN(dateA)) return 1; // Put invalid dates last
@@ -225,8 +227,6 @@ function sortProjects() {
     });
   } catch (error) {
     console.error('Error sorting projects:', error);
-     const projectsGrid = document.getElementById('projects-grid');
-     projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--neon-primary);">Error displaying projects.</div>`;
   }
 }
 
