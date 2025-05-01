@@ -61,8 +61,6 @@ async function calculatePercentile(value, statName) {
 
 /**
  * Update a stat element with value and percentile information
- * @tweakable Base value for the stat before applying formatting or percentiles
- * @tweakable Suffix added to the stat value (e.g., '/10', '/5')
  */
 async function updateStatWithPercentile(elementId, value, statName) {
   const element = document.getElementById(elementId);
@@ -78,17 +76,13 @@ async function updateStatWithPercentile(elementId, value, statName) {
 
   try {
     // Calculate percentile only if enabled and value is valid
-    /* @tweakable Controls if percentile is calculated and shown */
     const shouldCalculatePercentile = enablePercentiles && numericValue !== 0;
     const percentile = shouldCalculatePercentile ? await calculatePercentile(numericValue, statName) : null;
 
-    /* @tweakable Suffix added to stat value (e.g., '/10', '/5') */
     let suffix = "";
     if (statName === 'popularity') {
-      /* @tweakable Suffix for the popularity score */
       suffix = "/10";
     } else if (statName === 'rating') {
-      /* @tweakable Suffix for the quality rating */
       suffix = "/5";
     }
 
@@ -126,7 +120,6 @@ async function updateWithDirectStats() {
     document.getElementById('likes-count').innerHTML = formatNumber(totalLikes);
 
     // --- Calculate Popularity Score ---
-    /* @tweakable Base popularity score before checking thresholds */
     let popularityScore = 0;
     // Iterate thresholds (defined in config.js) from highest score to lowest
     for (const threshold of popularityThresholds) {
@@ -139,18 +132,13 @@ async function updateWithDirectStats() {
 
 
     // --- Calculate Quality Rating ---
-    /* @tweakable Base quality rating score */
     let rating = 0; // Default to 0 if no data
-     /* @tweakable Minimum likes required to calculate a rating > 0 */
     const minLikesForRating = 1;
-     /* @tweakable Minimum views required to calculate a rating based on VPL */
     const minViewsForVPLRating = 1;
-     /* @tweakable Default rating if user has likes but no views */
     const defaultRatingWithLikesOnly = 5;
 
     if (totalLikes >= minLikesForRating) {
       if (totalViews >= minViewsForVPLRating) {
-         /* @tweakable The calculated Views Per Like ratio */
         const viewsPerLike = totalViews / totalLikes;
         // Find the best matching rating (lowest VPL gets higher score)
         // Thresholds are defined in config.js, assuming lower vpl value means higher score
@@ -223,17 +211,17 @@ function generateBioText(userStats) {
   }
   
   let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
-  
+
   // Project stats
   const totalViews = userStats.views;
   const projectsCount = userStats.projects;
-  
+
   bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
   if (totalViews > 0) { 
     bioText += ` with ${formatNumber(totalViews)} total views`; 
   }
   bioText += '. ';
-  
+
   if (bioIncludeProjectDetails) {
     // Sort projects to find latest, most viewed, most liked
     const sortedByDate = [...projectsData].sort((a, b) => 

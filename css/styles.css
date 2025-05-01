@@ -1,35 +1,14 @@
 :root {
-  /* @tweakable Main background color */
   --bg-color: #120638;
-  
-  /* @tweakable Primary text color */
   --text-color: #ffffff;
-  
-  /* @tweakable Secondary text color */
   --text-secondary: #a8b2ff;
-  
-  /* @tweakable Card background color */
   --card-bg: rgba(16, 9, 44, 0.8);
-  
-  /* @tweakable Stat card background color */
   --stats-card-bg: rgba(16, 9, 44, 0.8);
-  
-  /* @tweakable Primary neon color */
   --neon-primary: #ff00ff;
-  
-  /* @tweakable Secondary neon color */
   --neon-secondary: #00eeff;
-  
-  /* @tweakable Tertiary neon color */
   --neon-tertiary: #bf00ff;
-  
-  /* @tweakable Neon glow intensity */
   --neon-glow: 5px;
-  
-  /* @tweakable Border width for neon effects */
   --neon-border-width: 2px;
-  
-  /* @tweakable Border radius for cards */
   --card-radius: 1rem;
 }
 
