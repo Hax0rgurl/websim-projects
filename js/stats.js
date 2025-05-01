@@ -4,25 +4,35 @@
  * Format numbers according to settings
  */
 function formatNumber(num) {
-  if (num === undefined || num === null) return '0';
-  
+  if (num === undefined || num === null || isNaN(Number(num))) return '0';
+  num = Number(num); // Ensure it's a number
+
+
   if (useCommaFormatting || num < numberFormatThreshold) {
+    // Use localeString for comma formatting or for small numbers
     return num.toLocaleString();
   } else {
+    // Use K/M notation for large numbers
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
     } else if (num >= 1000) {
       return (num / 1000).toFixed(1) + 'K';
     } else {
-      return num.toString();
+      return num.toString(); // Should not happen if threshold > 1000, but safe fallback
     }
   }
 }
+
 
 /**
  * Store user statistics in WebsimSocket persistent storage
  */
 async function storeUserStats(stats) {
+  // Removed percentile calculation/storage logic as per instructions
+  // This function can be kept for potential future use or removed if desired.
+  if (debugMode) console.log("Skipping storing user stats (functionality disabled/removed).", stats);
+  // Original logic (commented out):
+  /*
   try {
     await room.collection('user_stats').create({
       username: stats.username,
@@ -32,84 +42,27 @@ async function storeUserStats(stats) {
   } catch (error) {
     console.error('Error storing user stats:', error);
   }
+  */
 }
 
 /**
- * Calculate percentile of a value compared to stored stats
+ * Update a stat element with value
  */
-async function calculatePercentile(value, statName) {
-  if (!enablePercentiles) return null;
-  
-  try {
-    const records = room.collection('user_stats').getList();
-    if (!records || records.length === 0) return null;
-    
-    const values = records
-      .filter(r => r.stats && r.stats[statName] !== undefined && r.stats[statName] !== null)
-      .map(r => r.stats[statName]);
-    
-    if (values.length === 0) return null;
-    
-    values.sort((a, b) => b - a);
-    const position = values.findIndex(v => v <= value) + 1;
-    return Math.round((1 - (position / values.length)) * 100);
-  } catch (error) {
-    console.error('Error calculating percentile:', error);
-    return null;
-  }
-}
-
-/**
- * Update a stat element with value and percentile information
- * @tweakable Base value for the stat before applying formatting or percentiles
- * @tweakable Suffix added to the stat value (e.g., '/10', '/5')
- */
-async function updateStatWithPercentile(elementId, value, statName) {
+async function updateStatDisplay(elementId, value, suffix = '') {
   const element = document.getElementById(elementId);
   if (!element) return;
 
   // Ensure value is a number, default to 0 if not
   const numericValue = Number(value);
-  if (isNaN(numericValue)) {
-    element.innerHTML = '0';
-    if (debugMode) console.warn(`Invalid value provided for stat ${statName}:`, value);
-    return;
-  }
+  const displayValue = isNaN(numericValue) ? '0' : formatNumber(numericValue);
 
-  try {
-    // Calculate percentile only if enabled and value is valid
-    /* @tweakable Controls if percentile is calculated and shown */
-    const shouldCalculatePercentile = enablePercentiles && numericValue !== 0;
-    const percentile = shouldCalculatePercentile ? await calculatePercentile(numericValue, statName) : null;
+  element.innerHTML = `${displayValue}${suffix}`;
 
-    /* @tweakable Suffix added to stat value (e.g., '/10', '/5') */
-    let suffix = "";
-    if (statName === 'popularity') {
-      /* @tweakable Suffix for the popularity score */
-      suffix = "/10";
-    } else if (statName === 'rating') {
-      /* @tweakable Suffix for the quality rating */
-      suffix = "/5";
-    }
-
-    const formattedValue = formatNumber(numericValue);
-
-    if (percentile === null || isNaN(percentile)) {
-      element.innerHTML = `${formattedValue}${suffix}`;
-    } else {
-      element.innerHTML = `
-        ${formattedValue}${suffix}
-        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-          Top ${percentile}%
-        </div>
-      `;
-    }
-  } catch (error) {
-    console.error(`Error updating stat ${elementId}:`, error);
-    // Fallback to just showing the formatted number
-    element.innerHTML = `${formatNumber(numericValue) || '0'}`;
+  if (debugMode && isNaN(numericValue)) {
+    console.warn(`Invalid value provided for stat ${elementId}, displaying '0':`, value);
   }
 }
+
 
 /**
  * Update stats with direct API data and calculate derived stats like Popularity and Quality
@@ -117,16 +70,17 @@ async function updateStatWithPercentile(elementId, value, statName) {
 async function updateWithDirectStats() {
   try {
     // Fetch direct stats from API
-    const stats = await fetchUserStats();
+    const stats = await fetchUserStats(); // Fetches for the current 'username'
     const totalViews = stats.total_views || 0;
     const totalLikes = stats.total_likes || 0;
 
+    if (debugMode) console.log(`Fetched direct stats for ${username}:`, stats);
+
     // Update views and likes directly from API
-    document.getElementById('views-count').innerHTML = formatNumber(totalViews);
-    document.getElementById('likes-count').innerHTML = formatNumber(totalLikes);
+    await updateStatDisplay('views-count', totalViews);
+    await updateStatDisplay('likes-count', totalLikes);
 
     // --- Calculate Popularity Score ---
-    /* @tweakable Base popularity score before checking thresholds */
     let popularityScore = 0;
     // Iterate thresholds (defined in config.js) from highest score to lowest
     for (const threshold of popularityThresholds) {
@@ -135,40 +89,36 @@ async function updateWithDirectStats() {
         break; // Stop at the first matching threshold
       }
     }
-     if (debugMode) console.log(`Calculated Popularity: ${popularityScore}/10 based on ${totalViews} views, ${totalLikes} likes`);
+     if (debugMode) console.log(`Calculated Popularity for ${username}: ${popularityScore}/10 based on ${totalViews} views, ${totalLikes} likes`);
 
 
     // --- Calculate Quality Rating ---
-    /* @tweakable Base quality rating score */
     let rating = 0; // Default to 0 if no data
-     /* @tweakable Minimum likes required to calculate a rating > 0 */
-    const minLikesForRating = 1;
-     /* @tweakable Minimum views required to calculate a rating based on VPL */
-    const minViewsForVPLRating = 1;
-     /* @tweakable Default rating if user has likes but no views */
-    const defaultRatingWithLikesOnly = 5;
+    const minLikesForRating = 1; // Minimum likes required to calculate a rating > 0
+    const minViewsForVPLRating = 1; // Minimum views required to calculate a rating based on VPL
+    const defaultRatingWithLikesOnly = 5; // Default rating if user has likes but no views
 
     if (totalLikes >= minLikesForRating) {
       if (totalViews >= minViewsForVPLRating) {
-         /* @tweakable The calculated Views Per Like ratio */
         const viewsPerLike = totalViews / totalLikes;
         // Find the best matching rating (lowest VPL gets higher score)
         // Thresholds are defined in config.js, assuming lower vpl value means higher score
-        rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || defaultRatingWithLikesOnly; // Default to max score if VPL is very low or thresholds cover it
-         if (debugMode) console.log(`Calculated Quality: ${rating}/5 based on VPL: ${viewsPerLike.toFixed(2)} (${totalViews} views / ${totalLikes} likes)`);
+        // Default to max score (5) if VPL is very low (better than best threshold)
+        rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || defaultRatingWithLikesOnly;
+         if (debugMode) console.log(`Calculated Quality for ${username}: ${rating}/5 based on VPL: ${viewsPerLike.toFixed(2)} (${totalViews} views / ${totalLikes} likes)`);
       } else {
         // Has likes but effectively zero views, give default high rating
         rating = defaultRatingWithLikesOnly;
-         if (debugMode) console.log(`Calculated Quality: ${rating}/5 (default for likes with no views)`);
+         if (debugMode) console.log(`Calculated Quality for ${username}: ${rating}/5 (default for likes with no views)`);
       }
     } else {
-       if (debugMode) console.log(`Calculated Quality: ${rating}/5 (not enough likes: ${totalLikes})`);
+       if (debugMode) console.log(`Calculated Quality for ${username}: ${rating}/5 (not enough likes: ${totalLikes})`);
     }
 
 
-    // Update the stats display using the percentile function
-    await updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
-    await updateStatWithPercentile('rating-count', rating, 'rating');
+    // Update the stats display
+    await updateStatDisplay('popularity-count', popularityScore, '/10');
+    await updateStatDisplay('rating-count', rating, '/5');
 
     return stats; // Return the raw API stats for potential further use
   } catch (error) {
@@ -176,8 +126,13 @@ async function updateWithDirectStats() {
     // Set calculated stats to error/zero state
     document.getElementById('popularity-count').innerHTML = 'Err';
     document.getElementById('rating-count').innerHTML = 'Err';
+    // Also reset views/likes if fetch failed
+    document.getElementById('views-count').innerHTML = 'Err';
+    document.getElementById('likes-count').innerHTML = 'Err';
+    return null; // Indicate failure
   }
 }
+
 
 /**
  * Format relative time (e.g., "2d" for 2 days ago)
@@ -186,20 +141,20 @@ function getRelativeTimeString(date) {
   if (!(date instanceof Date)) {
     date = new Date(date);
   }
-  
+
   if (isNaN(date.getTime())) {
     return 'Invalid date';
   }
-  
+
   const now = new Date();
   const diffMs = now - date;
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
-  
+  const diffMonths = Math.floor(diffDays / 30.44); // Average days per month
+  const diffYears = Math.floor(diffDays / 365.25); // Account for leap years
+
   if (diffYears > 0) return `${diffYears}y`;
   if (diffMonths > 0) return `${diffMonths}mo`;
   if (diffDays > 0) return `${diffDays}d`;
@@ -208,6 +163,7 @@ function getRelativeTimeString(date) {
   return `${diffSecs}s`;
 }
 
+
 /**
  * Generate a bio text based on user stats
  */
@@ -215,93 +171,121 @@ function generateBioText(userStats) {
   if (!userStats || !window.currentUserProfile) {
     return 'Loading bio...';
   }
-  
+
   const user = window.currentUserProfile;
-  
-  if (!projectsData || projectsData.length === 0) {
-    return `Hello! My name is ${user.username}. I joined websim on ${new Date(user.created_at).toLocaleDateString()}.`;
+
+  if (!user.created_at) return 'Bio generation failed: Missing join date.';
+
+  // Use description from profile if available and auto-bio is off
+  if (!enableAutoBio && user.description) {
+      return user.description;
   }
-  
-  let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
-  
+  // If auto-bio is off and no description, return a simple default
+  if (!enableAutoBio && !user.description) {
+      return `User: ${user.username}. Joined: ${new Date(user.created_at).toLocaleDateString()}.`;
+  }
+
+  // --- Auto-Bio Generation ---
+  let bioText = `Hello! I'm ${user.username}. `;
+  bioText += `I joined websim ${getRelativeTimeString(user.created_at)} ago. `;
+
   // Project stats
-  const totalViews = userStats.views;
-  const projectsCount = userStats.projects;
-  
-  bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
-  if (totalViews > 0) { 
-    bioText += ` with ${formatNumber(totalViews)} total views`; 
+  const totalViews = userStats.views || 0;
+  const projectsCount = userStats.projects || 0;
+
+  if (projectsCount > 0) {
+    bioText += `I've made ${projectsCount} project${projectsCount !== 1 ? 's' : ''}`;
+    if (totalViews > 0) {
+      bioText += ` which have gathered ${formatNumber(totalViews)} views`;
+    }
+    bioText += '. ';
+  } else {
+    bioText += "I haven't posted any projects yet. ";
   }
-  bioText += '. ';
-  
-  if (bioIncludeProjectDetails) {
-    // Sort projects to find latest, most viewed, most liked
-    const sortedByDate = [...projectsData].sort((a, b) => 
-      new Date(b.project.created_at) - new Date(a.project.created_at));
-    
-    const sortedByViews = [...projectsData].sort((a, b) => 
-      b.project.stats.views - a.project.stats.views);
-    
-    const sortedByLikes = [...projectsData].sort((a, b) => 
-      b.project.stats.likes - a.project.stats.likes);
-    
-    // Add latest project info
-    if (sortedByDate.length > 0) {
-      const latestProject = sortedByDate[0].project;
-      bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>`;
-      
-      const projectDate = new Date(latestProject.created_at).toLocaleDateString();
-      if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
-        bioText += ` which I made on ${projectDate}`;
-      }
-      bioText += '. ';
-    }
-    
-    // Add most viewed project info
-    if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
-      const mostViewedProject = sortedByViews[0].project;
-      bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
-    }
-    
-    // Add most liked project info
-    if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
-      const mostLikedProject = sortedByLikes[0].project;
-      bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
+
+
+  if (bioIncludeProjectDetails && projectsData && projectsData.length > 0) {
+    // Sort projects to find latest, most viewed, most liked (ensure data is valid)
+    const validProjects = projectsData.filter(p => p.project && p.project.stats);
+
+    if (validProjects.length > 0) {
+        const sortedByDate = [...validProjects].sort((a, b) =>
+            new Date(b.project.created_at) - new Date(a.project.created_at));
+
+        const sortedByViews = [...validProjects].sort((a, b) =>
+            (b.project.stats.views || 0) - (a.project.stats.views || 0));
+
+        const sortedByLikes = [...validProjects].sort((a, b) =>
+            (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
+
+        // Add latest project info
+        if (sortedByDate.length > 0) {
+          const latestProject = sortedByDate[0].project;
+           // Use relative links
+          bioText += `My latest project is <a href="/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>. `;
+        }
+
+        // Add most viewed project info
+        const mostViewedProject = sortedByViews[0].project;
+        if (mostViewedProject.stats.views > 0) {
+          bioText += `My most viewed is <a href="/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> (${formatNumber(mostViewedProject.stats.views)} views). `;
+        }
+
+        // Add most liked project info
+        const mostLikedProject = sortedByLikes[0].project;
+        if (mostLikedProject.stats.likes > 0) {
+          bioText += `My most liked is <a href="/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;
+        }
     }
   }
-  
+
   // Add social info
   if (bioIncludeSocialStats) {
-    let socialText = [];
-    if (userStats.following > 0) {
-      socialText.push(`I'm following ${formatNumber(userStats.following)} people`);
+    let socialParts = [];
+    const followersCount = userStats.followers || 0;
+    const followingCount = userStats.following || 0;
+    const friendsCount = userStats.friends || 0; // Use the calculated friends count
+
+    if (followersCount > 0) {
+      socialParts.push(`${formatNumber(followersCount)} follower${followersCount !== 1 ? 's' : ''}`);
     }
-    
-    if (userStats.followers > 0) {
-      socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
+    if (followingCount > 0) {
+      socialParts.push(`following ${formatNumber(followingCount)}`);
     }
-    
-    if (socialText.length > 0) {
-      bioText += socialText.join(' and ') + '.';
+     if (friendsCount > 0) {
+      socialParts.push(`${formatNumber(friendsCount)} friend${friendsCount !== 1 ? 's' : ''}`);
+    }
+
+
+    if (socialParts.length > 0) {
+      bioText += `I have ${socialParts.join(', ')}. `;
     }
   }
-  
-  return bioText;
+
+  return bioText.trim(); // Trim trailing space
 }
+
 
 /**
  * Reset all stat displays to loading state
  */
 function resetStatsToLoading() {
-  document.getElementById('views-count').innerHTML = loadingText;
-  document.getElementById('sites-count').innerHTML = loadingText;
-  document.getElementById('likes-count').innerHTML = loadingText;
-  document.getElementById('followers-count').innerHTML = loadingText;
-  document.getElementById('following-count').innerHTML = loadingText;
-  document.getElementById('friends-count').innerHTML = loadingText;
-  document.getElementById('popularity-count').innerHTML = loadingText;
-  document.getElementById('rating-count').innerHTML = loadingText;
-  document.getElementById('unposted-count').innerHTML = loadingText;
-  document.getElementById('joined-count').innerHTML = loadingText;
+  const statIds = [
+    'views-count', 'sites-count', 'likes-count',
+    'followers-count', 'following-count', 'friends-count',
+    'popularity-count', 'rating-count', 'unposted-count',
+    'joined-count'
+  ];
+  statIds.forEach(id => {
+    const element = document.getElementById(id);
+    if (element && !element.classList.contains('joined')) { // Don't replace joined date structure
+        element.innerHTML = loadingText;
+    } else if (element && element.classList.contains('joined')) {
+        // Reset joined date specifically
+        element.innerHTML = loadingText;
+        element.classList.remove('joined'); // Remove class until data is loaded
+    }
+  });
+  // Reset bio/description
   document.getElementById('description').innerHTML = loadingText;
 }
