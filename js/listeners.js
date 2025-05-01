@@ -76,6 +76,30 @@ function setupActionListeners() {
     // --- Search ---
     const searchInput = document.getElementById('user-search');
     const searchToggle = document.getElementById('search-toggle');
+    
+    // --- Modal Close Button ---
+    const modalCloseBtn = document.querySelector('.modal-close');
+    const modalOverlay = document.querySelector('.modal-overlay');
+    const modal = document.querySelector('.modal');
+    
+    modalCloseBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('active');
+        modal.classList.remove('active');
+        // Stop iframe content from playing
+        const iframe = modal.querySelector('iframe');
+        iframe.src = '';
+    });
+    
+    // Also close when clicking the overlay
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.classList.remove('active');
+            modal.classList.remove('active');
+            // Stop iframe content from playing
+            const iframe = modal.querySelector('iframe');
+            iframe.src = '';
+        }
+    });
 }
 
 window.setupActionListeners = setupActionListeners;

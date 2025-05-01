@@ -113,6 +113,12 @@ async function getFriends() {
       
       hasMoreFollowers = followers.meta.has_next_page;
       followersAfter = followers.meta.end_cursor;
+      
+      // Limit the number of API calls to prevent infinite loops
+      if (Object.keys(allFollowers).length > 1000) {
+        console.warn("Too many followers, stopping loop");
+        break;
+      }
     }
     
     // Fetch all following
@@ -127,6 +133,12 @@ async function getFriends() {
       
       hasMoreFollowing = following.meta.has_next_page;
       followingAfter = following.meta.end_cursor;
+      
+      // Limit the number of API calls
+      if (Object.keys(allFollowing).length > 1000) {
+        console.warn("Too many following, stopping loop");
+        break;
+      }
     }
     
     // Find intersection (friends)
@@ -137,8 +149,9 @@ async function getFriends() {
       }
     });
     
-    // Update friends count
-    document.getElementById('friends-count').innerHTML = formatNumber(friends.length);
+    // Update friends count 
+    const friendsCount = friends.length || 0;
+    document.getElementById('friends-count').innerHTML = formatNumber(friendsCount);
     
     // Generate UI
     friendsLoading.style.display = 'none';
@@ -155,6 +168,7 @@ async function getFriends() {
   } catch (error) {
     console.error('Error loading friends:', error);
     document.getElementById('friends-loading').style.display = 'none';
+    document.getElementById('friends-count').innerHTML = '0';
     document.getElementById('friends-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading friends data</div>`;
   }
 }
@@ -172,10 +186,10 @@ async function loadMoreProjects() {
     isLoading = true;
 
     const projectLoadingEl = document.getElementById('projects-loading');
-    const loadMoreBtn = document.getElementById('load-more-projects'); // If using a button
+    const loadMoreBtn = document.getElementById('load-more-projects');
 
     projectLoadingEl.style.display = 'block';
-    // loadMoreBtn.style.display = 'none'; // Hide if using a button
+    // loadMoreBtn.style.display = 'none';
 
     // Fetch projects using the current visibility filter
     const data = await fetchProjects(projectsAfterCursor);
@@ -225,7 +239,6 @@ async function loadMoreProjects() {
         if (debugMode) console.log(`All projects loaded for filter '${currentVisibilityFilter}'. Final count: ${projectsData.length}`);
         isLoading = false;
         // Note: scroll listener might already be removed if we reached here via the scroll handler itself
-        // window.removeEventListener('scroll', scrollHandler); // Ensure listener is removed
 
         // --- Final Stat Update for this view ---
         // The "Projects" count card already reflects the final count for the current filter.
@@ -344,7 +357,10 @@ async function countAllProjectsManually() {
             if (currentCursor) params.append('after', currentCursor);
             // NO 'posted' filter here - we want all projects for the owner
 
-            const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+            const response = await fetch(`/api/v1/users/${username}/projects?${params}`, {
+                credentials: 'include' // Add credentials for authorization
+            });
+            
             if (!response.ok) {
                  console.error("Error counting projects page:", response.status);
                  // Return current count on error? Or throw? Let's return current count.

@@ -64,28 +64,39 @@ async function fetchProjects(afterCursor = null) {
 
     const viewingOwn = isViewingOwnProfile();
 
-    // Determine posted filter:
-    // For all filters except 'all' when viewing own profile, fetch only posted projects
-    if (!(isViewingOwnProfile() && currentVisibilityFilter === 'all')) {
+    // Special handling for private projects
+    if (currentVisibilityFilter === 'private') {
+      if (!viewingOwn) {
+        // Only the owner can see their private projects
+        if (debugMode) console.log("Not showing private projects for non-owner");
+        return { data: [], meta: { has_next_page: false } };
+      }
+      // For private projects, don't add the 'posted' parameter 
+      // This ensures we get all projects and can filter by visibility later
+      if (debugMode) console.log("[API] Fetching all projects to find private ones");
+    }
+    // For public filter or when viewing others' profiles, only show posted
+    else if (currentVisibilityFilter === 'public' || !viewingOwn) {
       params.append('posted', 'true');
       if (debugMode) {
-        console.log(
-          `[API] Fetching projects with posted=true (filter='${currentVisibilityFilter}', own=${isViewingOwnProfile()})`
-        );
+        console.log(`[API] Fetching projects with posted=true (filter='${currentVisibilityFilter}', own=${viewingOwn})`);
       }
-    } else {
-      // Viewing own profile & "all" filter: skip 'posted' param so that private projects are included
+    }
+    // For "all" filter on own profile, don't add posted parameter to get everything
+    else if (viewingOwn && currentVisibilityFilter === 'all') {
       if (debugMode) {
-        console.log(
-          `[API] Fetching OWN profile - all projects (including private and unposted), filter='${currentVisibilityFilter}'`
-        );
+        console.log(`[API] Fetching OWN profile - all projects (including private and unposted)`);
       }
     }
 
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
 
-    const response = await fetch(requestUrl);
+    // Include credentials to ensure proper authorization
+    const response = await fetch(requestUrl, {
+      credentials: 'include'
+    });
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText} (${requestUrl})`);
     }
@@ -261,7 +272,9 @@ async function fetchUnpostedProjects() {
           params.append('posted', 'false'); // Explicitly look for unposted
           if (currentCursor) params.append('after', currentCursor);
 
-          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+          const response = await fetch(`/api/v1/users/${username}/projects?${params}`, {
+            credentials: 'include' // Include credentials for authorization
+          });
 
           if (!response.ok) {
               if (response.status === 403) {

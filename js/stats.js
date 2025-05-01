@@ -222,103 +222,96 @@ function generateBioText(userStats) {
   }
 
   // --- Proceed with auto-generation ---
-  const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'a while ago';
-  let bioText = `Hello! My name is ${user.username} and I joined websim on ${joinDate}. `;
+  try {
+    const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'a while ago';
+    let bioText = `Hello! My name is ${user.username} and I joined websim on ${joinDate}. `;
 
-  const projectsCount = userStats.projects || 0; // Use stats total, might be more accurate than filtered data length
-  const totalViews = userStats.views || 0;
-  const totalLikes = userStats.likes || 0;
+    const projectsCount = userStats.projects || 0; 
+    const totalViews = userStats.views || 0;
+    const totalLikes = userStats.likes || 0;
 
-  if (projectsCount > 0) {
-    bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
-    if (totalViews > 0) {
-      bioText += ` with a total of ${formatNumber(totalViews)} views`;
+    if (projectsCount > 0) {
+      bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
+      if (totalViews > 0) {
+        bioText += ` with a total of ${formatNumber(totalViews)} views`;
+      }
+       if (totalLikes > 0) {
+         bioText += ` and ${formatNumber(totalLikes)} likes`;
+       }
+      bioText += '. ';
+    } else {
+        bioText += "I'm just getting started here! ";
     }
-     if (totalLikes > 0) {
-       bioText += ` and ${formatNumber(totalLikes)} likes`;
-     }
-    bioText += '. ';
-  } else {
-      bioText += "I'm just getting started here! ";
-  }
 
+    if (bioIncludeProjectDetails && projectsData && projectsData.length > 0) {
+      // Sort projects (using currently loaded data) to find examples
+      const validProjectsForSort = projectsData.filter(p => p && p.project && p.project.stats);
 
-  if (bioIncludeProjectDetails && projectsData && projectsData.length > 0) {
-    // Sort projects (using currently loaded data) to find examples
-    // Note: This uses the *filtered* project data available at the time of bio generation.
-    // Sorting requires valid project and stats objects.
-    const validProjectsForSort = projectsData.filter(p => p && p.project && p.project.stats);
+      if (validProjectsForSort.length > 0) {
+          const sortedByDate = [...validProjectsForSort].sort((a, b) =>
+              new Date(b.project.created_at) - new Date(a.project.created_at));
 
-    if (validProjectsForSort.length > 0) {
-        const sortedByDate = [...validProjectsForSort].sort((a, b) =>
-            new Date(b.project.created_at) - new Date(a.project.created_at));
+          const sortedByViews = [...validProjectsForSort].sort((a, b) =>
+              (b.project.stats.views || 0) - (a.project.stats.views || 0));
 
-        const sortedByViews = [...validProjectsForSort].sort((a, b) =>
-            (b.project.stats.views || 0) - (a.project.stats.views || 0));
+          const sortedByLikes = [...validProjectsForSort].sort((a, b) =>
+              (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
 
-        const sortedByLikes = [...validProjectsForSort].sort((a, b) =>
-            (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
+          // Add latest project info
+          if (sortedByDate.length > 0) {
+            const latestProject = sortedByDate[0].project;
+            if (latestProject && latestProject.title) {
+              bioText += `My latest creation is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title}</a>. `;
+            }
+          }
 
-        // Add latest project info
-        if (sortedByDate.length > 0) {
-          const latestProject = sortedByDate[0].project;
-          if (latestProject) {
-            const projectDate = new Date(latestProject.created_at).toLocaleDateString();
-             // Only add if title exists
-             if (latestProject.title) {
-                  bioText += `My latest creation is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title}</a>`;
-                 // Mention date only if significantly different from join date
-                 if (projectDate !== joinDate) {
-                    // bioText += ` (from ${projectDate})`; // Optional date mention
-                 }
-                  bioText += '. ';
+          // Add most viewed project info (if significant views)
+          if (sortedByViews.length > 0 && (sortedByViews[0].project.stats.views || 0) > 10) {
+            const mostViewedProject = sortedByViews[0].project;
+             if (mostViewedProject && mostViewedProject.title) {
+                bioText += `Check out <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title}</a>, which has gathered ${formatNumber(mostViewedProject.stats.views)} views! `;
              }
           }
-        }
 
-        // Add most viewed project info (if significant views)
-        if (sortedByViews.length > 0 && (sortedByViews[0].project.stats.views || 0) > 10) { // Threshold for mentioning
-          const mostViewedProject = sortedByViews[0].project;
-           if (mostViewedProject && mostViewedProject.title) { // Ensure title exists
-              bioText += `Check out <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title}</a>, which has gathered ${formatNumber(mostViewedProject.stats.views)} views! `;
-           }
-        }
-
-        // Add most liked project info (if significant likes)
-        if (sortedByLikes.length > 0 && (sortedByLikes[0].project.stats.likes || 0) > 5) { // Threshold for mentioning
-          const mostLikedProject = sortedByLikes[0].project;
-          if (mostLikedProject && mostLikedProject.title) { // Ensure title exists
-             bioText += `People seem to like <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;
+          // Add most liked project info (if significant likes)
+          if (sortedByLikes.length > 0 && (sortedByLikes[0].project.stats.likes || 0) > 5) {
+            const mostLikedProject = sortedByLikes[0].project;
+            if (mostLikedProject && mostLikedProject.title) {
+               bioText += `People seem to like <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;
+            }
           }
-        }
+      }
     }
+
+    // Add social info
+    if (bioIncludeSocialStats) {
+      let socialText = [];
+      if (userStats.following > 0) {
+        socialText.push(`I'm following ${formatNumber(userStats.following)} creator${userStats.following !== 1 ? 's' : ''}`);
+      }
+
+      if (userStats.followers > 0) {
+        socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person follows' : 'people follow'} me`);
+      }
+
+      if (socialText.length > 0) {
+         bioText += socialText.join(' and ') + '.';
+      }
+    }
+
+    // Use original description if auto-bio generation resulted in something too short or generic
+    const minBioLength = 100; // Arbitrary minimum length
+    if (user.description && bioText.length < minBioLength) {
+        if (debugMode) console.log("Auto-bio too short, falling back to user description.");
+        return user.description;
+    }
+
+    return bioText.trim(); // Trim any trailing spaces
+  } catch (error) {
+    console.error('Error generating bio text:', error);
+    // Fallback to user's original description if bio generation fails
+    return user.description || 'Welcome to my profile!';
   }
-
-  // Add social info
-  if (bioIncludeSocialStats) {
-    let socialText = [];
-    if (userStats.following > 0) {
-      socialText.push(`I'm following ${formatNumber(userStats.following)} creator${userStats.following !== 1 ? 's' : ''}`);
-    }
-
-    if (userStats.followers > 0) {
-      socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person follows' : 'people follow'} me`);
-    }
-
-    if (socialText.length > 0) {
-       bioText += socialText.join(' and ') + '.';
-    }
-  }
-
-  // Use original description if auto-bio generation resulted in something too short or generic
-  const minBioLength = 100; // Arbitrary minimum length
-  if (user.description && bioText.length < minBioLength) {
-      if (debugMode) console.log("Auto-bio too short, falling back to user description.");
-      return user.description;
-  }
-
-
-  return bioText.trim(); // Trim any trailing spaces
 }
 
 /**
