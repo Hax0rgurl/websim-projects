@@ -53,6 +53,8 @@ async function fetchFollowersCount() {
 
 /**
  * Fetch a user's projects with pagination based on the current visibility filter.
+ * Handles 'public', 'private', and 'all' filters.
+ * API enforces permissions for viewing private projects.
  */
 async function fetchProjects(afterCursor = null) {
   try {
@@ -60,36 +62,36 @@ async function fetchProjects(afterCursor = null) {
     if (afterCursor) params.append('after', afterCursor);
     params.append('first', projectBatchSize.toString());
 
-    // Determine API filtering based on currentVisibilityFilter and profile ownership
     const viewingOwn = isViewingOwnProfile();
 
     if (viewingOwn) {
-      // User is viewing their own profile, apply filter choice
+      // User is viewing their own profile, apply chosen filter
       switch (currentVisibilityFilter) {
         case 'public':
-          params.append(privateFilterParam, 'true'); // API filters FOR posted=true
-          if (debugMode) console.log("[API] Fetching OWN profile - PUBLIC projects (posted=true)");
+          params.append('visibility', 'public');
+          if (debugMode) console.log("[API] Fetching OWN profile - PUBLIC projects (visibility=public)");
           break;
         case 'private':
-          params.append(privateFilterParam, 'false'); // API filters FOR posted=false
-          if (debugMode) console.log("[API] Fetching OWN profile - PRIVATE projects (posted=false)");
+          params.append('visibility', 'private');
+          // API will return 403 if not authorized, handled below
+          if (debugMode) console.log("[API] Fetching OWN profile - PRIVATE projects (visibility=private)");
           break;
         case 'all':
-          // Do not add the 'posted' param to get all projects
-          if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'posted' filter)");
+          // Do not add the 'visibility' param to get all projects for the owner
+          if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'visibility' filter)");
           break;
         default:
-           params.append(privateFilterParam, 'true'); // Default safety: show public
-           if (debugMode) console.warn("[API] Unknown visibility filter, defaulting to PUBLIC (posted=true)");
+           params.append('visibility', 'public'); // Default safety: show public
+           if (debugMode) console.warn("[API] Unknown visibility filter, defaulting to PUBLIC (visibility=public)");
            break;
       }
     } else {
-      // User is viewing someone else's profile, ALWAYS filter for public/posted
-      params.append(privateFilterParam, 'true');
-      if (debugMode) console.log("[API] Fetching OTHER profile - FORCING PUBLIC projects (posted=true)");
+      // User is viewing someone else's profile, ALWAYS filter for public
+      params.append('visibility', 'public');
+      if (debugMode) console.log("[API] Fetching OTHER profile - FORCING PUBLIC projects (visibility=public)");
     }
 
-    params.append('sort_by', 'updated_at'); // Adjust sort order if needed based on 'currentSort'
+    params.append('sort_by', 'updated_at'); // Keep sorting by update time for pagination consistency
 
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
@@ -97,24 +99,27 @@ async function fetchProjects(afterCursor = null) {
     const response = await fetch(requestUrl);
     if (!response.ok) {
        if (response.status === 403) {
-         console.warn(`Received 403 Forbidden fetching projects for filter '${currentVisibilityFilter}'. User might lack permission or API issue.`);
-         // Return empty to avoid breaking, show error in UI if needed
+         console.warn(`Received 403 Forbidden fetching projects for filter '${currentVisibilityFilter}'. User might lack permission (e.g., trying to view private) or API issue.`);
          document.getElementById('projects-grid').innerHTML = `<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Permission denied to view these projects.</div>`;
          document.getElementById('projects-loading').style.display = 'none';
-         return { data: [], meta: { has_next_page: false } };
+         return { data: [], meta: { has_next_page: false } }; // Return empty data
       }
-      throw new Error(`Failed to fetch projects: ${response.status}`);
+      throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText} for URL: ${requestUrl}`);
     }
 
     const data = await response.json();
 
     if (debugMode) {
       console.log(`Fetched ${data.projects.data.length} projects for filter '${currentVisibilityFilter}', has_next_page: ${data.projects.meta.has_next_page}`);
-      // data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}, posted: ${p?.project?.posted}`));
+      // Log sample project visibility for debugging
+      data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}`));
     }
 
+    // Filter out potential null projects just in case API returns partial errors
+    const validProjectData = data.projects.data.filter(item => item && item.project);
+
     return {
-      data: data.projects.data.map(item => ({
+      data: validProjectData.map(item => ({
         project: item.project,
         project_revision: item.project_revision,
         site: item.site,
@@ -124,9 +129,8 @@ async function fetchProjects(afterCursor = null) {
     };
   } catch (error) {
     console.error('Error fetching projects:', error);
-    // Consider showing an error in the UI
     document.getElementById('projects-loading').style.display = 'none';
-    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects. Please try again later.</div>';
+    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects. Please try refreshing.</div>';
     return { data: [], meta: { has_next_page: false } };
   }
 }
@@ -254,43 +258,65 @@ async function fetchRecentFollower() {
 }
 
 /**
- * Fetch count of unposted projects
+ * Fetch count of unposted projects (using the 'posted=false' parameter)
+ * Note: This assumes 'posted=false' is still a valid way to find projects
+ * that are neither explicitly public nor private (e.g., drafts).
+ * If 'posted' is fully deprecated, this needs removal or rework.
  */
 async function fetchUnpostedProjects() {
-  try {
-    const params = new URLSearchParams();
-    params.append('first', '100');
-    params.append('posted', 'false');
-    
-    const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch unposted projects: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    let totalCount = data.projects.data.length;
-    let hasNextPage = data.projects.meta.has_next_page;
-    let nextCursor = data.projects.meta.end_cursor;
-    
-    // Continue fetching if there are more pages
-    while (hasNextPage) {
-      params.set('after', nextCursor);
-      const nextResponse = await fetch(`/api/v1/users/${username}/projects?${params}`);
-      
-      if (!nextResponse.ok) {
-        console.error('Error fetching more unposted projects');
-        break;
-      }
-      
-      const nextData = await nextResponse.json();
-      totalCount += nextData.projects.data.length;
-      hasNextPage = nextData.projects.meta.has_next_page;
-      nextCursor = nextData.projects.meta.end_cursor;
-    }
-    
-    return totalCount;
-  } catch (error) {
-    console.error('Error fetching unposted projects:', error);
+  // Check if the user is viewing their own profile. Only owners can see unposted/drafts.
+  if (!isViewingOwnProfile()) {
+    if (debugMode) console.log("Skipping unposted count for other user's profile.");
     return 0;
   }
+
+  if(debugMode) console.log("Fetching UNPOSTED project count (using posted=false)");
+
+  let totalCount = 0;
+  let currentCursor = null;
+  let hasMore = true;
+  const batchCount = 100; // Fetch large batches for counting
+
+  while(hasMore) {
+      try {
+          const params = new URLSearchParams();
+          params.append('first', batchCount.toString());
+          params.append('posted', 'false'); // Explicitly look for unposted
+          if (currentCursor) params.append('after', currentCursor);
+
+          const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
+
+          if (!response.ok) {
+              if (response.status === 403) {
+                   console.warn(`Received 403 Forbidden fetching unposted projects for ${username}. Assuming 0.`);
+                   return 0; // Can't view them, count is 0
+              }
+              throw new Error(`Failed to fetch unposted projects page: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const projectsOnPage = data.projects.data.length;
+          totalCount += projectsOnPage;
+          hasMore = data.projects.meta.has_next_page;
+          currentCursor = data.projects.meta.end_cursor;
+
+          if (debugMode) console.log(`Unposted count: Fetched ${projectsOnPage}, total so far: ${totalCount}, hasMore: ${hasMore}`);
+
+          if (!hasMore || projectsOnPage === 0) {
+              break;
+          }
+           // Safety break
+          if (totalCount > 5000) {
+              console.warn("Unposted project count exceeded 5000, stopping loop.");
+              break;
+          }
+
+      } catch (e) {
+          console.error("Exception during unposted project count:", e);
+          console.warn(`Unposted count stopped due to exception. Partial count: ${totalCount}`);
+          return totalCount; // Return current count on exception
+      }
+  }
+  if (debugMode) console.log("Finished unposted project count. Total:", totalCount);
+  return totalCount;
 }

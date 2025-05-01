@@ -62,11 +62,28 @@ function createProjectCard(project, project_revision, site) {
   card.style.position = 'relative';
 
   // Set border color based on visibility
-  if (project.visibility === 'private') {
-    card.style.borderColor = privateProjectBorderColor;
-  } else if (project.visibility === 'unlisted') {
-    card.style.borderColor = unlistedProjectBorderColor;
+  let borderColor = publicProjectBorderColor; // Default to public color
+  let visibilityText = publicProjectText;
+
+  switch (project.visibility) {
+    case 'private':
+      borderColor = privateProjectBorderColor;
+      visibilityText = privateProjectText;
+      break;
+    case 'unlisted':
+      borderColor = unlistedProjectBorderColor;
+      visibilityText = unlistedProjectText;
+      break;
+    case 'public':
+      // borderColor remains publicProjectBorderColor
+      visibilityText = publicProjectText;
+      break;
+    default:
+      // Keep default border if visibility is unknown/null
+      visibilityText = 'UNKNOWN'; // Should not happen often
+      break;
   }
+  card.style.borderColor = borderColor;
 
   // Create preview image or placeholder
   const previewHtml = site
@@ -76,29 +93,26 @@ function createProjectCard(project, project_revision, site) {
             style="height: ${projectPreviewHeight}px;"
             loading="lazy"
             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-       <div class="preview-image"
-            style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
+       <div class="preview-image placeholder"
+            style="height: ${projectPreviewHeight}px; display: none;">
          No Preview Available
        </div>`
-    : `<div class="preview-image"
-           style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: var(--text-secondary);">
-          No Preview
+    : `<div class="preview-image placeholder"
+           style="height: ${projectPreviewHeight}px; display: flex;">
+          No Site Generated
         </div>`;
 
   // Add visibility indicator if enabled
   let visibilityIndicator = '';
-  if (showVisibilityIndicator) {
-    let visibilityText = '';
-    if (project.visibility === 'private') {
-      visibilityText = privateProjectText;
-    } else if (project.visibility === 'unlisted') {
-      visibilityText = unlistedProjectText;
-    } else {
-      visibilityText = publicProjectText;
-    }
-
-    visibilityIndicator = `<div class="project-visibility-indicator">${visibilityText}</div>`;
+  // Only show indicator for non-public projects, or always if configured
+  if (showVisibilityIndicator && project.visibility !== 'public') {
+      // Style the indicator based on visibility
+      let indicatorColor = borderColor; // Match border color
+      visibilityIndicator = `<div class="project-visibility-indicator" style="color: ${indicatorColor}; border-color: ${indicatorColor}; box-shadow: 0 0 5px ${indicatorColor};">
+        ${visibilityText}
+      </div>`;
   }
+
 
   card.innerHTML = `
     ${visibilityIndicator}
@@ -122,12 +136,20 @@ function createProjectCard(project, project_revision, site) {
   projectLink.addEventListener('click', (e) => {
     e.preventDefault();
 
+    // Prevent opening modal for private projects if not owner?
+    // API should prevent loading content anyway, but UI can be clearer
+    if (project.visibility === 'private' && !isViewingOwnProfile()) {
+      // Maybe show a small notification instead?
+      console.log("Cannot view private project of another user.");
+      return;
+    }
+
     const modal = document.querySelector('.modal');
     const overlay = document.querySelector('.modal-overlay');
     const iframe = modal.querySelector('iframe');
     const projectUrl = `https://websim.ai/p/${project.id}`;
 
-    iframe.src = projectUrl;
+    iframe.src = projectUrl; // Load project in iframe
 
     let openNewTab = modal.querySelector('.open-new-tab');
     if (!openNewTab) {
@@ -152,19 +174,42 @@ function createProjectCard(project, project_revision, site) {
 function sortProjects() {
   try {
     const projectsGrid = document.getElementById('projects-grid');
-    projectsGrid.innerHTML = '';
+    projectsGrid.innerHTML = ''; // Clear previous items
+
+    if (!projectsData || projectsData.length === 0) {
+        // Display a message if no projects match the current filter
+        let message = "No projects found.";
+        if (currentVisibilityFilter === 'private') message = "No private projects found.";
+        else if (currentVisibilityFilter === 'public') message = "No public projects found.";
+
+        projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
+        return;
+    }
 
     let sortedProjects = [...projectsData];
+
+    // Filter out any potential null/invalid project entries before sorting
+    sortedProjects = sortedProjects.filter(p => p && p.project && p.project.stats);
+
     switch (currentSort) {
       case 'views':
-        sortedProjects.sort((a, b) => b.project.stats.views - a.project.stats.views);
+        sortedProjects.sort((a, b) => (b.project.stats.views || 0) - (a.project.stats.views || 0));
         break;
       case 'likes':
-        sortedProjects.sort((a, b) => b.project.stats.likes - a.project.stats.likes);
+        sortedProjects.sort((a, b) => (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
         break;
       case 'recent':
       default:
-        sortedProjects.sort((a, b) => new Date(b.project.created_at) - new Date(a.project.created_at));
+        // Sort by creation date, handling potential invalid dates
+        sortedProjects.sort((a, b) => {
+            const dateA = a.project.created_at ? new Date(a.project.created_at) : 0;
+            const dateB = b.project.created_at ? new Date(b.project.created_at) : 0;
+            // Ensure valid dates are compared correctly
+            if (isNaN(dateA) && isNaN(dateB)) return 0;
+            if (isNaN(dateA)) return 1; // Put invalid dates last
+            if (isNaN(dateB)) return -1; // Put invalid dates last
+            return dateB - dateA; // Newest first
+        });
         break;
     }
 

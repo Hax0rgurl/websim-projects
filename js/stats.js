@@ -134,23 +134,30 @@ async function updateWithDirectStats() {
     // --- Calculate Quality Rating ---
     let rating = 0; // Default to 0 if no data
     const minLikesForRating = 1;
-    const minViewsForVPLRating = 1;
-    const defaultRatingWithLikesOnly = 5;
+    const minViewsForVPLRating = 1; // Require at least 1 view to calculate VPL meaningfully
+    const defaultRatingWithLikesOnly = 5; // Max score if likes exist but views are 0
 
     if (totalLikes >= minLikesForRating) {
       if (totalViews >= minViewsForVPLRating) {
         const viewsPerLike = totalViews / totalLikes;
         // Find the best matching rating (lowest VPL gets higher score)
-        // Thresholds are defined in config.js, assuming lower vpl value means higher score
-        rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || defaultRatingWithLikesOnly; // Default to max score if VPL is very low or thresholds cover it
+        // Thresholds are defined in config.js, assuming lower vpl means higher score
+        // Iterate thresholds from lowest score (highest VPL) to highest score (lowest VPL)
+        rating = 1; // Start with lowest score
+        for (const threshold of ratingThresholds.sort((a,b) => a.viewsPerLike - b.viewsPerLike)) { // Sort by VPL ascending
+             if (viewsPerLike <= threshold.viewsPerLike) {
+                 rating = threshold.score;
+                 break; // Found the appropriate tier
+             }
+         }
          if (debugMode) console.log(`Calculated Quality: ${rating}/5 based on VPL: ${viewsPerLike.toFixed(2)} (${totalViews} views / ${totalLikes} likes)`);
       } else {
         // Has likes but effectively zero views, give default high rating
         rating = defaultRatingWithLikesOnly;
-         if (debugMode) console.log(`Calculated Quality: ${rating}/5 (default for likes with no views)`);
+         if (debugMode) console.log(`Calculated Quality: ${rating}/5 (default for likes >= ${minLikesForRating} with < ${minViewsForVPLRating} views)`);
       }
     } else {
-       if (debugMode) console.log(`Calculated Quality: ${rating}/5 (not enough likes: ${totalLikes})`);
+       if (debugMode) console.log(`Calculated Quality: ${rating}/5 (not enough likes: ${totalLikes} < ${minLikesForRating})`);
     }
 
 
@@ -203,78 +210,115 @@ function generateBioText(userStats) {
   if (!userStats || !window.currentUserProfile) {
     return 'Loading bio...';
   }
-  
+
   const user = window.currentUserProfile;
-  
-  if (!projectsData || projectsData.length === 0) {
-    return `Hello! My name is ${user.username}. I joined websim on ${new Date(user.created_at).toLocaleDateString()}.`;
-  }
-  
-  let bioText = `Hello! My name is ${user.username} and I joined websim on ${new Date(user.created_at).toLocaleDateString()}. `;
 
-  // Project stats
-  const totalViews = userStats.views;
-  const projectsCount = userStats.projects;
-
-  bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
-  if (totalViews > 0) { 
-    bioText += ` with ${formatNumber(totalViews)} total views`; 
+  // Use the description from the profile if available and auto-bio is off
+  if (!enableAutoBio && user.description) {
+    return user.description;
   }
-  bioText += '. ';
+  if (!enableAutoBio && !user.description) {
+      return ''; // Return empty if disabled and no description exists
+  }
 
-  if (bioIncludeProjectDetails) {
-    // Sort projects to find latest, most viewed, most liked
-    const sortedByDate = [...projectsData].sort((a, b) => 
-      new Date(b.project.created_at) - new Date(a.project.created_at));
-    
-    const sortedByViews = [...projectsData].sort((a, b) => 
-      b.project.stats.views - a.project.stats.views);
-    
-    const sortedByLikes = [...projectsData].sort((a, b) => 
-      b.project.stats.likes - a.project.stats.likes);
-    
-    // Add latest project info
-    if (sortedByDate.length > 0) {
-      const latestProject = sortedByDate[0].project;
-      bioText += `My latest project is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title || 'Untitled'}</a>`;
-      
-      const projectDate = new Date(latestProject.created_at).toLocaleDateString();
-      if (projectDate !== new Date(user.created_at).toLocaleDateString()) {
-        bioText += ` which I made on ${projectDate}`;
-      }
-      bioText += '. ';
+  // --- Proceed with auto-generation ---
+  const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'a while ago';
+  let bioText = `Hello! My name is ${user.username} and I joined websim on ${joinDate}. `;
+
+  const projectsCount = userStats.projects || 0; // Use stats total, might be more accurate than filtered data length
+  const totalViews = userStats.views || 0;
+  const totalLikes = userStats.likes || 0;
+
+  if (projectsCount > 0) {
+    bioText += `Since then, I've made ${projectsCount} project${projectsCount > 1 ? 's' : ''}`;
+    if (totalViews > 0) {
+      bioText += ` with a total of ${formatNumber(totalViews)} views`;
     }
-    
-    // Add most viewed project info
-    if (sortedByViews.length > 0 && sortedByViews[0].project.stats.views > 0) {
-      const mostViewedProject = sortedByViews[0].project;
-      bioText += `My most viewed project is <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title || 'Untitled'}</a> with ${formatNumber(mostViewedProject.stats.views)} views. `;
-    }
-    
-    // Add most liked project info
-    if (sortedByLikes.length > 0 && sortedByLikes[0].project.stats.likes > 0) {
-      const mostLikedProject = sortedByLikes[0].project;
-      bioText += `My most liked project is <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title || 'Untitled'}</a> with ${formatNumber(mostLikedProject.stats.likes)} likes. `;
+     if (totalLikes > 0) {
+       bioText += ` and ${formatNumber(totalLikes)} likes`;
+     }
+    bioText += '. ';
+  } else {
+      bioText += "I'm just getting started here! ";
+  }
+
+
+  if (bioIncludeProjectDetails && projectsData && projectsData.length > 0) {
+    // Sort projects (using currently loaded data) to find examples
+    // Note: This uses the *filtered* project data available at the time of bio generation.
+    // Sorting requires valid project and stats objects.
+    const validProjectsForSort = projectsData.filter(p => p && p.project && p.project.stats);
+
+    if (validProjectsForSort.length > 0) {
+        const sortedByDate = [...validProjectsForSort].sort((a, b) =>
+            new Date(b.project.created_at) - new Date(a.project.created_at));
+
+        const sortedByViews = [...validProjectsForSort].sort((a, b) =>
+            (b.project.stats.views || 0) - (a.project.stats.views || 0));
+
+        const sortedByLikes = [...validProjectsForSort].sort((a, b) =>
+            (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
+
+        // Add latest project info
+        if (sortedByDate.length > 0) {
+          const latestProject = sortedByDate[0].project;
+          if (latestProject) {
+            const projectDate = new Date(latestProject.created_at).toLocaleDateString();
+             // Only add if title exists
+             if (latestProject.title) {
+                  bioText += `My latest creation is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title}</a>`;
+                 // Mention date only if significantly different from join date
+                 if (projectDate !== joinDate) {
+                    // bioText += ` (from ${projectDate})`; // Optional date mention
+                 }
+                  bioText += '. ';
+             }
+          }
+        }
+
+        // Add most viewed project info (if significant views)
+        if (sortedByViews.length > 0 && (sortedByViews[0].project.stats.views || 0) > 10) { // Threshold for mentioning
+          const mostViewedProject = sortedByViews[0].project;
+           if (mostViewedProject && mostViewedProject.title) { // Ensure title exists
+              bioText += `Check out <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title}</a>, which has gathered ${formatNumber(mostViewedProject.stats.views)} views! `;
+           }
+        }
+
+        // Add most liked project info (if significant likes)
+        if (sortedByLikes.length > 0 && (sortedByLikes[0].project.stats.likes || 0) > 5) { // Threshold for mentioning
+          const mostLikedProject = sortedByLikes[0].project;
+          if (mostLikedProject && mostLikedProject.title) { // Ensure title exists
+             bioText += `People seem to like <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;
+          }
+        }
     }
   }
-  
+
   // Add social info
   if (bioIncludeSocialStats) {
     let socialText = [];
     if (userStats.following > 0) {
-      socialText.push(`I'm following ${formatNumber(userStats.following)} people`);
+      socialText.push(`I'm following ${formatNumber(userStats.following)} creator${userStats.following !== 1 ? 's' : ''}`);
     }
-    
+
     if (userStats.followers > 0) {
-      socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person who follows' : 'people who follow'} me`);
+      socialText.push(`${formatNumber(userStats.followers)} ${userStats.followers === 1 ? 'person follows' : 'people follow'} me`);
     }
-    
+
     if (socialText.length > 0) {
-      bioText += socialText.join(' and ') + '.';
+       bioText += socialText.join(' and ') + '.';
     }
   }
-  
-  return bioText;
+
+  // Use original description if auto-bio generation resulted in something too short or generic
+  const minBioLength = 100; // Arbitrary minimum length
+  if (user.description && bioText.length < minBioLength) {
+      if (debugMode) console.log("Auto-bio too short, falling back to user description.");
+      return user.description;
+  }
+
+
+  return bioText.trim(); // Trim any trailing spaces
 }
 
 /**

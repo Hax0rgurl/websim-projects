@@ -17,14 +17,15 @@ const synthSunColor = "#ff00ff";
 // --- UI Elements ---
 const userAvatarSize = 80;
 const projectPreviewHeight = 200;
-const privateProjectBorderColor = "#ff00ff";
-const unlistedProjectBorderColor = "#bf00ff";
+const privateProjectBorderColor = "#ff00ff"; // Use primary neon for private
+const unlistedProjectBorderColor = "#bf00ff"; // Use tertiary neon for unlisted
+const publicProjectBorderColor = "#00eeff"; // Use secondary neon for public (or default card border)
 const loadingText = '<div class="loading-spinner"></div>';
 
 // --- Data Loading & API ---
 const projectBatchSize = 50;
 const userBatchSize = 50;
-const privateFilterParam = "posted";
+// DEPRECATED: const privateFilterParam = "posted"; // Replaced by 'visibility' param
 const toggleRefreshDelay = 100;
 const defaultUsername = 'abandonedmuse';
 
@@ -33,7 +34,7 @@ const useCommaFormatting = true;
 const numberFormatThreshold = 10000;
 const enablePercentiles = true;
 const initialStatsProjectCount = 10;
-const includePrivateInStats = true;
+// DEPRECATED: const includePrivateInStats = true; // Stats now primarily use direct API calls
 
 const popularityThresholds = [
   { score: 10, views: 20000, likes: 325 },
@@ -49,10 +50,11 @@ const popularityThresholds = [
 ];
 
 const ratingThresholds = [
-  { score: 1, viewsPerLike: 100 },
-  { score: 2, viewsPerLike: 75 },
-  { score: 3, viewsPerLike: 65 },
-  { score: 4, viewsPerLike: 50 },
+    { score: 5, viewsPerLike: 20 },  // High quality: ~5% like rate or better
+    { score: 4, viewsPerLike: 50 },  // Good quality: ~2% like rate
+    { score: 3, viewsPerLike: 100 }, // Average quality: ~1% like rate
+    { score: 2, viewsPerLike: 200 }, // Below average: ~0.5% like rate
+    { score: 1, viewsPerLike: Infinity }, // Low quality / few interactions
 ];
 
 // --- Bio Generation ---
@@ -61,12 +63,13 @@ const bioIncludeProjectDetails = true;
 const bioIncludeSocialStats = true;
 
 // --- Project Visibility Toggles ---
-const initialOwnVisibilityFilter = 'all';
-const showOtherUsersPrivateProjects = false;
+const initialOwnVisibilityFilter = 'all'; // Default for own profile
+const initialOtherVisibilityFilter = 'public'; // Default for other profiles
+// DEPRECATED: const showOtherUsersPrivateProjects = false; // API permissions handle this
 const showVisibilityIndicator = true;
 const privateProjectText = "PRIVATE";
 const publicProjectText = "PUBLIC";
 const unlistedProjectText = "UNLISTED";
 
 // --- Debugging ---
-const debugMode = false;
+const debugMode = false; // Set to true for console logs
