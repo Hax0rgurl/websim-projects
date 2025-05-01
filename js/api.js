@@ -65,16 +65,20 @@ async function fetchProjects(afterCursor = null) {
     const viewingOwn = isViewingOwnProfile();
 
     // Determine posted filter:
-    // - non-owner or 'public' filter: fetch only posted (public) projects
-    // - owner & 'private' or 'all': skip 'posted' to include private/unposted
-    if (!viewingOwn || currentVisibilityFilter === 'public') {
+    // For all filters except 'all' when viewing own profile, fetch only posted projects
+    if (!(isViewingOwnProfile() && currentVisibilityFilter === 'all')) {
       params.append('posted', 'true');
       if (debugMode) {
-        console.log(`[API] Fetching ${viewingOwn ? 'OWN' : 'OTHER'} profile - posted projects (posted=true) with filter='${currentVisibilityFilter}'`);
+        console.log(
+          `[API] Fetching projects with posted=true (filter='${currentVisibilityFilter}', own=${isViewingOwnProfile()})`
+        );
       }
     } else {
+      // Viewing own profile & "all" filter: skip 'posted' param so that private projects are included
       if (debugMode) {
-        console.log(`[API] Fetching OWN profile - include private/unposted for filter='${currentVisibilityFilter}'`);
+        console.log(
+          `[API] Fetching OWN profile - all projects (including private and unposted), filter='${currentVisibilityFilter}'`
+        );
       }
     }
 
