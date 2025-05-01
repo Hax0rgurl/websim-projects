@@ -79,8 +79,11 @@ const ratingThresholds = [
 /* @tweakable Default username to load on page load */
 const defaultUsername = 'abandonedmuse';
 
-/* @tweakable Show private projects by default */
+/* @tweakable Show private projects by default when viewing *another* user's profile (requires showOtherUsersPrivateProjects to be true) */
 const showPrivateByDefault = false;
+
+/* @tweakable Show private projects by default when viewing *your own* profile */
+const showOwnPrivateByDefault = true;
 
 /* @tweakable Indicator text for private projects */
 const privateProjectText = "PRIVATE";
@@ -100,11 +103,8 @@ const privateProjectBorderColor = "#ff00ff";
 /* @tweakable Color for unlisted project cards */
 const unlistedProjectBorderColor = "#bf00ff";
 
-/* @tweakable Show projects from other users that are private (only works for your own account) */
+/* @tweakable Allow viewing private projects on other users' profiles (only works if you have permission) */
 const showOtherUsersPrivateProjects = false;
-
-/* @tweakable Show own projects regardless of visibility */
-const showAllOwnProjects = true;
 
 /* @tweakable Debug mode - log information about visibility settings and API calls */
 const debugMode = false;

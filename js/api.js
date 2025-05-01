@@ -59,34 +59,49 @@ async function fetchProjects(afterCursor = null) {
     const params = new URLSearchParams();
     if (afterCursor) params.append('after', afterCursor);
     params.append('first', projectBatchSize.toString());
-    
-    // Determine if we should filter out private projects
-    const shouldFilterPrivate = !isShowingPrivate || (!isViewingOwnProfile() && !showOtherUsersPrivateProjects);
-    
-    if (shouldFilterPrivate) {
-      params.append(privateFilterParam, 'true');
-      if (debugMode) console.log("Filtering to show only public projects");
+
+    // Determine if we should filter out private projects.
+    // Filtering is needed if:
+    // 1. The user explicitly wants to see only public/posted projects (!isShowingPrivate).
+    // 2. OR The user is viewing someone else's profile AND we're configured not to show other users' private projects.
+    const viewingOwn = isViewingOwnProfile();
+    const shouldFilter = !isShowingPrivate || (!viewingOwn && !showOtherUsersPrivateProjects);
+
+    if (shouldFilter) {
+      params.append(privateFilterParam, 'true'); // API filters FOR posted=true
+      if (debugMode) console.log("Filtering API request to show only posted projects (posted=true)");
     } else {
-      if (debugMode) console.log("Showing all projects including private");
+      // Don't add the 'posted' param, so the API returns all projects (including private)
+      if (debugMode) console.log("Fetching all projects (including private, no 'posted' param)");
     }
-    
-    params.append('sort_by', 'updated_at');
-    
+
+    params.append('sort_by', 'updated_at'); // Adjust sort order if needed based on 'currentSort'
+
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects:", requestUrl);
-    
+
     const response = await fetch(requestUrl);
     if (!response.ok) {
+      // Handle 403 Forbidden - might indicate user cannot view private projects even if requested
+      if (response.status === 403 && !shouldFilter) {
+         console.warn("Received 403 Forbidden when trying to fetch all projects. User might lack permission for private projects.");
+         // Optionally retry with filtering enabled, or show an error message.
+         // For now, just return empty to avoid breaking.
+         return { data: [], meta: { has_next_page: false } };
+      }
       throw new Error(`Failed to fetch projects: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (debugMode) {
       console.log(`Fetched ${data.projects.data.length} projects, has_next_page: ${data.projects.meta.has_next_page}`);
-      console.log("Sample project visibility:", data.projects.data[0]?.project?.visibility);
+      data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}`));
     }
-    
+
+    // Filter client-side ONLY if necessary (e.g., API doesn't support perfect filtering, though 'posted' should work)
+    // Let's rely on the API filter for now.
+
     return {
       data: data.projects.data.map(item => ({
         project: item.project,
@@ -98,6 +113,9 @@ async function fetchProjects(afterCursor = null) {
     };
   } catch (error) {
     console.error('Error fetching projects:', error);
+    // Consider showing an error in the UI
+    document.getElementById('projects-loading').style.display = 'none';
+    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects.</div>';
     return { data: [], meta: { has_next_page: false } };
   }
 }
