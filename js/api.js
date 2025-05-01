@@ -64,31 +64,14 @@ async function fetchProjects(afterCursor = null) {
 
     const viewingOwn = isViewingOwnProfile();
 
-    if (viewingOwn) {
-      // User is viewing their own profile, apply chosen filter
-      switch (currentVisibilityFilter) {
-        case 'public':
-          params.append('visibility', 'public');
-          if (debugMode) console.log("[API] Fetching OWN profile - PUBLIC projects (visibility=public)");
-          break;
-        case 'private':
-          params.append('visibility', 'private');
-          // API will return 403 if not authorized, handled below
-          if (debugMode) console.log("[API] Fetching OWN profile - PRIVATE projects (visibility=private)");
-          break;
-        case 'all':
-          // Do not add the 'visibility' param to get all projects for the owner
-          if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'visibility' filter)");
-          break;
-        default:
-           params.append('visibility', 'public'); // Default safety: show public
-           if (debugMode) console.warn("[API] Unknown visibility filter, defaulting to PUBLIC (visibility=public)");
-           break;
+    // If this is NOT owner's "all" view, fetch only posted projects
+    if (!(viewingOwn && currentVisibilityFilter === 'all')) {
+      params.append('posted', 'true');
+      if (debugMode) {
+        console.log(`[API] Fetching ${viewingOwn ? 'OWN' : 'OTHER'} profile - posted projects only (posted=true)`);
       }
     } else {
-      // User is viewing someone else's profile, ALWAYS filter for public
-      params.append('visibility', 'public');
-      if (debugMode) console.log("[API] Fetching OTHER profile - FORCING PUBLIC projects (visibility=public)");
+      if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'posted' filter)");
     }
 
     params.append('sort_by', 'updated_at'); // Keep sorting by update time for pagination consistency
@@ -98,13 +81,7 @@ async function fetchProjects(afterCursor = null) {
 
     const response = await fetch(requestUrl);
     if (!response.ok) {
-       if (response.status === 403) {
-         console.warn(`Received 403 Forbidden fetching projects for filter '${currentVisibilityFilter}'. User might lack permission (e.g., trying to view private) or API issue.`);
-         document.getElementById('projects-grid').innerHTML = `<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Permission denied to view these projects.</div>`;
-         document.getElementById('projects-loading').style.display = 'none';
-         return { data: [], meta: { has_next_page: false } }; // Return empty data
-      }
-      throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText} for URL: ${requestUrl}`);
+      throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText} (${requestUrl})`);
     }
 
     const data = await response.json();
