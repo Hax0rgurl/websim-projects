@@ -61,79 +61,121 @@ async function calculatePercentile(value, statName) {
 
 /**
  * Update a stat element with value and percentile information
+ * @tweakable Base value for the stat before applying formatting or percentiles
+ * @tweakable Suffix added to the stat value (e.g., '/10', '/5')
  */
 async function updateStatWithPercentile(elementId, value, statName) {
   const element = document.getElementById(elementId);
   if (!element) return;
-  
-  if (isNaN(value) || value === undefined || value === null) {
+
+  // Ensure value is a number, default to 0 if not
+  const numericValue = Number(value);
+  if (isNaN(numericValue)) {
     element.innerHTML = '0';
+    if (debugMode) console.warn(`Invalid value provided for stat ${statName}:`, value);
     return;
   }
-  
+
   try {
-    const percentile = await calculatePercentile(value, statName);
+    // Calculate percentile only if enabled and value is valid
+    /* @tweakable Controls if percentile is calculated and shown */
+    const shouldCalculatePercentile = enablePercentiles && numericValue !== 0;
+    const percentile = shouldCalculatePercentile ? await calculatePercentile(numericValue, statName) : null;
+
+    /* @tweakable Suffix added to stat value (e.g., '/10', '/5') */
     let suffix = "";
-    
     if (statName === 'popularity') {
+      /* @tweakable Suffix for the popularity score */
       suffix = "/10";
     } else if (statName === 'rating') {
+      /* @tweakable Suffix for the quality rating */
       suffix = "/5";
     }
-    
+
+    const formattedValue = formatNumber(numericValue);
+
     if (percentile === null || isNaN(percentile)) {
-      element.innerHTML = `${formatNumber(value)}${suffix}`;
+      element.innerHTML = `${formattedValue}${suffix}`;
     } else {
       element.innerHTML = `
-        ${formatNumber(value)}${suffix}
-        <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
+        ${formattedValue}${suffix}
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
           Top ${percentile}%
         </div>
       `;
     }
   } catch (error) {
     console.error(`Error updating stat ${elementId}:`, error);
-    element.innerHTML = `${formatNumber(value) || '0'}`;
+    // Fallback to just showing the formatted number
+    element.innerHTML = `${formatNumber(numericValue) || '0'}`;
   }
 }
 
 /**
- * Update stats with direct API data
+ * Update stats with direct API data and calculate derived stats like Popularity and Quality
  */
 async function updateWithDirectStats() {
   try {
     // Fetch direct stats from API
     const stats = await fetchUserStats();
-    
+    const totalViews = stats.total_views || 0;
+    const totalLikes = stats.total_likes || 0;
+
     // Update views and likes directly from API
-    document.getElementById('views-count').innerHTML = formatNumber(stats.total_views || 0);
-    document.getElementById('likes-count').innerHTML = formatNumber(stats.total_likes || 0);
-    
-    // Calculate popularity and rating based on these direct values
+    document.getElementById('views-count').innerHTML = formatNumber(totalViews);
+    document.getElementById('likes-count').innerHTML = formatNumber(totalLikes);
+
+    // --- Calculate Popularity Score ---
+    /* @tweakable Base popularity score before checking thresholds */
     let popularityScore = 0;
+    // Iterate thresholds (defined in config.js) from highest score to lowest
     for (const threshold of popularityThresholds) {
-      if ((stats.total_views || 0) >= threshold.views && (stats.total_likes || 0) >= threshold.likes) {
+      if (totalViews >= threshold.views && totalLikes >= threshold.likes) {
         popularityScore = threshold.score;
-        break;
+        break; // Stop at the first matching threshold
       }
     }
-    
-    // Calculate quality rating
-    let rating = 0;
-    if ((stats.total_likes || 0) > 0 && (stats.total_views || 0) > 0) {
-      const viewsPerLike = stats.total_views / stats.total_likes;
-      rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || 5;
-    } else if ((stats.total_likes || 0) > 0) {
-      rating = 5; // Max rating if likes but no views
+     if (debugMode) console.log(`Calculated Popularity: ${popularityScore}/10 based on ${totalViews} views, ${totalLikes} likes`);
+
+
+    // --- Calculate Quality Rating ---
+    /* @tweakable Base quality rating score */
+    let rating = 0; // Default to 0 if no data
+     /* @tweakable Minimum likes required to calculate a rating > 0 */
+    const minLikesForRating = 1;
+     /* @tweakable Minimum views required to calculate a rating based on VPL */
+    const minViewsForVPLRating = 1;
+     /* @tweakable Default rating if user has likes but no views */
+    const defaultRatingWithLikesOnly = 5;
+
+    if (totalLikes >= minLikesForRating) {
+      if (totalViews >= minViewsForVPLRating) {
+         /* @tweakable The calculated Views Per Like ratio */
+        const viewsPerLike = totalViews / totalLikes;
+        // Find the best matching rating (lowest VPL gets higher score)
+        // Thresholds are defined in config.js, assuming lower vpl value means higher score
+        rating = ratingThresholds.find(t => viewsPerLike >= t.viewsPerLike)?.score || defaultRatingWithLikesOnly; // Default to max score if VPL is very low or thresholds cover it
+         if (debugMode) console.log(`Calculated Quality: ${rating}/5 based on VPL: ${viewsPerLike.toFixed(2)} (${totalViews} views / ${totalLikes} likes)`);
+      } else {
+        // Has likes but effectively zero views, give default high rating
+        rating = defaultRatingWithLikesOnly;
+         if (debugMode) console.log(`Calculated Quality: ${rating}/5 (default for likes with no views)`);
+      }
+    } else {
+       if (debugMode) console.log(`Calculated Quality: ${rating}/5 (not enough likes: ${totalLikes})`);
     }
-    
-    // Update the stats display
+
+
+    // Update the stats display using the percentile function
     await updateStatWithPercentile('popularity-count', popularityScore, 'popularity');
     await updateStatWithPercentile('rating-count', rating, 'rating');
-    
-    return stats;
+
+    return stats; // Return the raw API stats for potential further use
   } catch (error) {
-    console.error('Error updating direct stats:', error);
+    console.error('Error updating direct stats and calculating derived ones:', error);
+    // Set calculated stats to error/zero state
+    document.getElementById('popularity-count').innerHTML = 'Err';
+    document.getElementById('rating-count').innerHTML = 'Err';
   }
 }
 
