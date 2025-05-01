@@ -599,7 +599,26 @@ body {
   box-shadow: 0 0 5px var(--neon-primary);
 }
 
-.visibility-toggle {
+.project-sort-controls {
+  margin-bottom: 0;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.visibility-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.visibility-button {
   background: rgba(0, 0, 0, 0.3);
   border: var(--neon-border-width) solid var(--neon-secondary);
   color: var(--text-secondary);
@@ -607,18 +626,33 @@ body {
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
-  margin-left: 1rem;
   box-shadow: 0 0 calc(var(--neon-glow) * 0.5) var(--neon-secondary);
 }
 
-.visibility-toggle:hover {
+.visibility-button:hover {
   background: rgba(0, 238, 255, 0.2);
   color: var(--text-color);
   box-shadow: 0 0 var(--neon-glow) var(--neon-secondary);
 }
 
-.visibility-toggle.active {
+.visibility-button.active {
   background: var(--neon-secondary);
   color: var(--text-color);
   box-shadow: 0 0 calc(var(--neon-glow) * 1.5) var(--neon-secondary);
+}
+
+#show-private {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .visibility-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }

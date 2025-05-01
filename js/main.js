@@ -4,10 +4,10 @@ let projectsAfterCursor = null;
 let followersAfterCursor = null;
 let followingAfterCursor = null;
 let currentSort = 'recent';
+let currentVisibilityFilter = 'public'; // Default, will be updated in initProfile
 let projectsData = [];
 let isLoading = false;
-// Initialize isShowingPrivate based on config and whether it's own profile
-let isShowingPrivate = false; // Default will be set properly in initProfile/room init
+// let isShowingPrivate = false; // DEPRECATED: Replaced by currentVisibilityFilter
 let currentUser = null;
 window.currentUserProfile = null; // Store the profile being viewed
 
@@ -171,7 +171,7 @@ async function loadMoreFollowing() {
 }
 
 /**
- * Load and process all projects for a user
+ * Load and process all projects for a user based on current filters
  */
 async function loadMoreProjects() {
   try {
@@ -183,11 +183,12 @@ async function loadMoreProjects() {
     isLoading = true;
 
     const projectLoadingEl = document.getElementById('projects-loading');
-    const loadMoreBtn = document.getElementById('load-more-projects');
+    const loadMoreBtn = document.getElementById('load-more-projects'); // If using a button
 
     projectLoadingEl.style.display = 'block';
     // loadMoreBtn.style.display = 'none'; // Hide if using a button
 
+    // Fetch projects using the current visibility filter
     const data = await fetchProjects(projectsAfterCursor);
 
     if (!data || !data.data) {
@@ -200,19 +201,14 @@ async function loadMoreProjects() {
     // Append new projects to existing data
     projectsData = projectsData.concat(data.data);
 
-    // Re-sort and update the grid display *before* potentially heavy stat calculations
+    // Re-sort and update the grid display
     sortProjects();
 
-    // --- Update related stats ---
-    // Update project count based on currently *loaded* data first for responsiveness
-    // The final accurate count will be set once all projects are loaded.
-    let currentVisibleProjectCount = projectsData.length; // Count based on what's fetched so far (respecting filters)
-    document.getElementById('sites-count').innerHTML = formatNumber(currentVisibleProjectCount);
+    // Update project count stat to reflect the *currently loaded* count for the active filter
+    document.getElementById('sites-count').innerHTML = formatNumber(projectsData.length);
+    // Update the label in case it wasn't updated by button click (e.g., initial load)
+    updateVisibilityFilterButtons();
 
-    // Update derived stats (like popularity/rating) using direct API data.
-    // This is usually done earlier in initProfile, but can be refreshed here if needed,
-    // though it's primarily based on total views/likes, not project count itself.
-    // await updateWithDirectStats(); // Uncomment if recalculation based on project load is desired
 
     projectLoadingEl.style.display = 'none'; // Hide loading indicator *after* rendering grid
 
@@ -222,98 +218,110 @@ async function loadMoreProjects() {
 
         // Setup infinite scroll
         const scrollHandler = () => {
-          // Check if still on projects view before loading more
           const projectsViewActive = document.getElementById('projects-view').style.display !== 'none';
           if (projectsViewActive && !isLoading && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
               window.removeEventListener('scroll', scrollHandler);
               if(debugMode) console.log("Near bottom, loading more projects...");
-              loadMoreProjects(); // Recursively load next batch
+              loadMoreProjects();
           } else if (!projectsViewActive) {
-              window.removeEventListener('scroll', scrollHandler); // Stop listening if view changed
+              window.removeEventListener('scroll', scrollHandler);
               if(debugMode) console.log("Projects view inactive, stopping scroll listener.");
           }
         };
+        // Add listener with passive option for better performance
         window.addEventListener('scroll', scrollHandler, { passive: true });
 
     } else {
-        // --- All projects loaded ---
-        if (debugMode) console.log("All projects loaded.");
+        // --- All projects loaded for the current filter ---
+        if (debugMode) console.log(`All projects loaded for filter '${currentVisibilityFilter}'. Final count: ${projectsData.length}`);
         isLoading = false;
-        window.removeEventListener('scroll', loadMoreProjects); // Remove scroll listener if any
+        // Note: scroll listener might already be removed if we reached here via the scroll handler itself
+        // window.removeEventListener('scroll', scrollHandler); // Ensure listener is removed
 
-        // --- Final Stat Calculation and Update ---
-        let totalProjectsForStat;
-        if (includePrivateInStats && isViewingOwnProfile()) {
-            // If showing private and it's own profile, try to get the absolute total count
-            try {
-                totalProjectsForStat = await countAllProjectsManually(); // Use the helper to count *all* projects regardless of filter
-                if (debugMode) console.log("Manually counted total projects for final stat:", totalProjectsForStat);
-            } catch (countError) {
-                console.error("Error getting final total project count:", countError);
-                totalProjectsForStat = projectsData.length; // Fallback to loaded count on error
+        // --- Final Stat Update for this view ---
+        // The "Projects" count card already reflects the final count for the current filter.
+        document.getElementById('sites-count').innerHTML = formatNumber(projectsData.length);
+
+
+        // We only need to recalculate *other* stats if this is the *very first* full load sequence
+        // Check if other core stats are still showing loading spinners
+        const needsFullStatUpdate = document.getElementById('views-count').innerHTML.includes('spinner');
+
+        if (needsFullStatUpdate) {
+             if (debugMode) console.log("Performing final full stat update sequence...");
+             // Fetch latest direct API stats (views, likes) for final calculations
+            const finalApiStats = await fetchUserStats();
+
+            // Fetch latest counts for followers/following (might have changed)
+            const [finalFollowingCount, finalFollowersCount] = await Promise.all([
+                fetchFollowingCount(),
+                fetchFollowersCount(),
+            ]);
+            document.getElementById('following-count').innerHTML = formatNumber(finalFollowingCount);
+            document.getElementById('followers-count').innerHTML = formatNumber(finalFollowersCount);
+
+            // Recalculate derived stats based on final direct numbers
+            await updateWithDirectStats(); // This recalculates Pop/Quality based on finalApiStats
+
+            // Get counts for Friends and Unposted
+            await getFriends(); // Updates 'friends-count' internally
+            const finalUnpostedCount = await fetchUnpostedProjects();
+            await updateStatWithPercentile('unposted-count', finalUnpostedCount, 'unposted');
+
+
+            // --- Prepare data for Bio and Storage ---
+            const finalPopularity = parseInt(document.getElementById('popularity-count').innerText.split('/')[0].replace(/[^\d]/g, '')) || 0;
+            const finalRating = parseInt(document.getElementById('rating-count').innerText.split('/')[0].replace(/[^\d]/g, '')) || 0;
+            const finalFriendsCount = parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0;
+
+             // Use the project count relevant to the *initial* filter state for bio/storage?
+             // Or should it always be total? Let's use the total count if possible for storage.
+             let totalProjectsForStorage = projectsData.length; // Default to filtered count
+             if (isViewingOwnProfile()) {
+                 try {
+                     totalProjectsForStorage = await countAllProjectsManually(); // Get total for storage/bio
+                      if (debugMode) console.log("Using manually counted total projects for storage/bio:", totalProjectsForStorage);
+                 } catch (countError) {
+                     console.error("Error getting total project count for storage:", countError);
+                     // Fallback to loaded count
+                 }
+             }
+
+
+            const userStats = {
+                username: username,
+                projects: totalProjectsForStorage, // Store total count if possible
+                views: finalApiStats.total_views || 0,
+                likes: finalApiStats.total_likes || 0,
+                followers: finalFollowersCount,
+                following: finalFollowingCount,
+                friends: finalFriendsCount,
+                popularity: finalPopularity,
+                rating: finalRating,
+                unposted: finalUnpostedCount,
+            };
+             if(debugMode) console.log("Final User Stats object for storage:", userStats);
+
+            // Store stats if enabled
+            await storeUserStats(userStats);
+
+            // Generate bio text if enabled and profile data exists
+            if (enableAutoBio && window.currentUserProfile) {
+                // Pass the stats object with the potentially total project count
+                const bioText = generateBioText(userStats);
+                document.getElementById('description').innerHTML = bioText;
+            } else if (!window.currentUserProfile) {
+                 document.getElementById('description').innerHTML = ''; // Clear loading/error text if profile failed
+            } else {
+                 // Bio disabled, ensure description is user's original or empty
+                 document.getElementById('description').innerHTML = window.currentUserProfile.description || '';
             }
+
         } else {
-            // Otherwise, the count is simply the number of projects loaded according to filters
-            totalProjectsForStat = projectsData.length;
-            if (debugMode) console.log("Using loaded project count for final stat:", totalProjectsForStat);
+             if (debugMode) console.log("Skipping full stat update sequence as initial load seems complete.");
         }
-        // Final update for the "Projects" card
-        document.getElementById('sites-count').innerHTML = formatNumber(totalProjectsForStat);
-
-        // Fetch latest direct API stats (views, likes) for final calculations
-        const finalApiStats = await fetchUserStats();
-
-        // Fetch latest counts for followers/following (might have changed)
-        const [finalFollowingCount, finalFollowersCount] = await Promise.all([
-            fetchFollowingCount(),
-            fetchFollowersCount(),
-        ]);
-        document.getElementById('following-count').innerHTML = formatNumber(finalFollowingCount);
-        document.getElementById('followers-count').innerHTML = formatNumber(finalFollowersCount);
-
-        // Recalculate derived stats based on final direct numbers
-        await updateWithDirectStats(); // This recalculates Pop/Quality based on finalApiStats
-
-        // Get counts for Friends and Unposted
-        // Note: getFriends recalculates and updates its own count display ('friends-count')
-        await getFriends();
-        const finalUnpostedCount = await fetchUnpostedProjects();
-        await updateStatWithPercentile('unposted-count', finalUnpostedCount, 'unposted');
-
-        // --- Prepare data for Bio and Storage ---
-         // Get potentially updated calculated stats from the DOM after updateWithDirectStats/updateStatWithPercentile
-        const finalPopularity = parseInt(document.getElementById('popularity-count').innerText.split('/')[0].replace(/[^\d]/g, '')) || 0;
-        const finalRating = parseInt(document.getElementById('rating-count').innerText.split('/')[0].replace(/[^\d]/g, '')) || 0;
-        const finalFriendsCount = parseInt(document.getElementById('friends-count').innerText.replace(/[^\d]/g, '')) || 0; // Friends count updated by getFriends()
 
 
-        const userStats = {
-            username: username,
-            projects: totalProjectsForStat,
-            views: finalApiStats.total_views || 0,
-            likes: finalApiStats.total_likes || 0,
-            followers: finalFollowersCount,
-            following: finalFollowingCount,
-            friends: finalFriendsCount,
-            popularity: finalPopularity,
-            rating: finalRating,
-            unposted: finalUnpostedCount,
-        };
-         if(debugMode) console.log("Final User Stats object:", userStats);
-
-        // Store stats if enabled
-        await storeUserStats(userStats);
-
-        // Generate bio text if enabled and profile data exists
-        if (enableAutoBio && window.currentUserProfile) {
-            const bioText = generateBioText(userStats);
-            document.getElementById('description').innerHTML = bioText;
-        } else if (!window.currentUserProfile) {
-             document.getElementById('description').innerHTML = ''; // Clear loading/error text if profile failed
-        } else {
-             // Bio disabled, ensure description is user's original or empty
-             document.getElementById('description').innerHTML = window.currentUserProfile.description || '';
-        }
     }
 
   } catch (error) {
@@ -324,38 +332,61 @@ async function loadMoreProjects() {
   }
 }
 
-/** Helper function to count all projects manually if API lacks count=true */
+
+/** Helper function to count all projects manually regardless of filters */
 async function countAllProjectsManually() {
+    // Only run if viewing own profile, otherwise return 0 or error?
+    if (!isViewingOwnProfile()) {
+        console.warn("Attempted to count all projects manually for another user. Returning 0.");
+        return 0;
+    }
+
     let count = 0;
     let currentCursor = null;
     let hasMore = true;
     const batchCount = 100; // Fetch large batches for counting
+
+    if (debugMode) console.log("Starting manual count of ALL projects...");
 
     while(hasMore) {
         try {
             const params = new URLSearchParams();
             params.append('first', batchCount.toString());
             if (currentCursor) params.append('after', currentCursor);
-            // No 'posted' filter here - we want all
+            // NO 'posted' filter here - we want all projects for the owner
 
             const response = await fetch(`/api/v1/users/${username}/projects?${params}`);
             if (!response.ok) {
                  console.error("Error counting projects page:", response.status);
-                 break; // Stop counting on error
+                 // Return current count on error? Or throw? Let's return current count.
+                 console.warn(`Manual count stopped due to error. Partial count: ${count}`);
+                 return count;
             }
             const data = await response.json();
-            count += data.projects.data.length;
+            const projectsOnPage = data.projects.data.length;
+            count += projectsOnPage;
             hasMore = data.projects.meta.has_next_page;
             currentCursor = data.projects.meta.end_cursor;
 
-            if (!hasMore || data.projects.data.length === 0) {
+            if (debugMode) console.log(`Manual count: Fetched ${projectsOnPage}, total so far: ${count}, hasMore: ${hasMore}`);
+
+
+            if (!hasMore || projectsOnPage === 0) {
+                break; // Exit loop if no more pages or page is empty
+            }
+             // Safety break to prevent infinite loops in unexpected scenarios
+            if (count > 5000) { // Arbitrary limit
+                console.warn("Manual project count exceeded 5000, stopping loop.");
                 break;
             }
+
         } catch (e) {
             console.error("Exception during manual project count:", e);
-            break; // Stop counting on error
+            console.warn(`Manual count stopped due to exception. Partial count: ${count}`);
+            return count; // Return current count on exception
         }
     }
+     if (debugMode) console.log("Finished manual count of ALL projects. Total:", count);
     return count;
 }
 
@@ -365,72 +396,60 @@ async function countAllProjectsManually() {
  */
 async function initProfile() {
   try {
-    // Clear previous profile state immediately
+    // --- Reset UI State ---
     document.getElementById('username').textContent = '';
     document.getElementById('avatar').src = '';
-    document.getElementById('description').innerHTML = loadingText; // Show loading for bio
+    document.getElementById('description').innerHTML = loadingText;
     document.querySelector('.username-hint').classList.add('hidden');
-    resetStatsToLoading();
-    window.currentUserProfile = null; // Clear old profile data
-    projectsData = []; // Clear project data
+    resetStatsToLoading(); // Sets loading spinners
+    window.currentUserProfile = null;
+    projectsData = [];
     projectsAfterCursor = null;
     followersAfterCursor = null;
     followingAfterCursor = null;
-    isLoading = false; // Reset loading flag
-    document.getElementById('projects-grid').innerHTML = ''; // Clear grids
+    isLoading = false;
+    document.getElementById('projects-grid').innerHTML = '';
     document.getElementById('followers-grid').innerHTML = '';
     document.getElementById('following-grid').innerHTML = '';
     document.getElementById('friends-grid').innerHTML = '';
-    document.querySelectorAll('.view-content').forEach(v => v.style.display = 'none'); // Hide all views
-    document.getElementById('projects-view').style.display = 'block'; // Show projects view by default
+    document.querySelectorAll('.view-content').forEach(v => v.style.display = 'none');
+    document.getElementById('projects-view').style.display = 'block';
     document.querySelectorAll('.view-button').forEach(b => b.classList.remove('active'));
     document.querySelector('.view-button[data-view="projects"]').classList.add('active');
     document.querySelectorAll('.sort-button').forEach(b => b.classList.remove('active'));
     document.querySelector('.sort-button[data-sort="recent"]').classList.add('active');
     currentSort = 'recent';
+    // Reset visibility filter controls (will be set correctly below)
+    document.getElementById('visibility-filter-controls').style.display = 'none';
+    document.querySelectorAll('.visibility-button').forEach(b => b.classList.remove('active'));
 
-
-    // Determine initial private state *after* fetching current user
-    // This happens in the room.initialize().then() block now
-
-    const user = await fetchUserProfile(); // Fetches profile for 'username' state var
+    // --- Fetch User Profile ---
+    const user = await fetchUserProfile();
     if (!user) {
       document.getElementById('description').innerHTML = 'Error: User not found.';
-      // Clear loading spinners from stats
       document.querySelectorAll('.stat-card .value').forEach(el => {
-          if (el.contains(el.querySelector('.loading-spinner'))) {
-              el.innerHTML = 'N/A';
-          }
+          if (el.innerHTML.includes('spinner')) el.innerHTML = 'N/A';
       });
       return;
     }
+    window.currentUserProfile = user;
 
-    window.currentUserProfile = user; // Store the fetched profile data globally
+    // --- Update Header ---
     document.getElementById('username').textContent = user.username;
     document.getElementById('avatar').src = user.avatar_url || '';
     document.getElementById('avatar').onerror = function() {
       this.src = 'https://images.websim.ai/avatar/anonymous';
     };
-
-    // Update joined date
-    const joinedEl = document.getElementById('joined-count');
-    joinedEl.className = 'value joined';
-    const joinedDate = new Date(user.created_at);
-    joinedEl.innerHTML = `
-      <div>${getRelativeTimeString(joinedDate)}</div>
-      <div class="ago">ago</div>
-    `;
-
-    // Set the correct initial state for the private toggle *after* knowing if it's own profile
-    if (isViewingOwnProfile()) {
-        isShowingPrivate = showOwnPrivateByDefault;
-         if(debugMode) console.log("Setting initial isShowingPrivate for own profile:", isShowingPrivate);
-    } else {
-        isShowingPrivate = showPrivateByDefault;
-         if(debugMode) console.log("Setting initial isShowingPrivate for other profile:", isShowingPrivate);
+    // Restore user description if auto-bio is off or fails
+    if (!enableAutoBio) {
+        document.getElementById('description').innerHTML = user.description || '';
     }
-    updatePrivateToggleState(); // Update button based on initial state
 
+    // --- Update Joined Date ---
+    const joinedEl = document.getElementById('joined-count');
+
+    // Determine initial private state *after* fetching current user
+    // This happens in the room.initialize().then() block now
 
     // Fetch initial counts and stats
     const [followingCount, followersCount, statsData] = await Promise.all([
@@ -467,7 +486,6 @@ async function initProfile() {
 
     // Setup listeners (ensure they are only added once or are idempotent)
     setupActionListeners();
-
 
   } catch (error) {
     console.error('Error initializing profile:', error);
@@ -555,8 +573,8 @@ room.initialize().then(async () => {
     
     // If we're viewing our own profile, we can enable private projects by default
     if (currentUser && currentUser.username === username) {
-      isShowingPrivate = showOwnPrivateByDefault;
-      console.log("Showing private projects by default (own profile)");
+      currentVisibilityFilter = 'all'; // Show all (public + private) by default for own profile
+      console.log("Showing all projects by default (own profile)");
     }
   } catch (error) {
     console.error("Error getting current user:", error);

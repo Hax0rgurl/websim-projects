@@ -52,7 +52,7 @@ async function fetchFollowersCount() {
 }
 
 /**
- * Fetch a user's projects with pagination
+ * Fetch a user's projects with pagination based on the current visibility filter.
  */
 async function fetchProjects(afterCursor = null) {
   try {
@@ -60,33 +60,47 @@ async function fetchProjects(afterCursor = null) {
     if (afterCursor) params.append('after', afterCursor);
     params.append('first', projectBatchSize.toString());
 
-    // Determine if we should filter out private projects.
-    // Filtering is needed if:
-    // 1. The user explicitly wants to see only public/posted projects (!isShowingPrivate).
-    // 2. OR The user is viewing someone else's profile AND we're configured not to show other users' private projects.
+    // Determine API filtering based on currentVisibilityFilter and profile ownership
     const viewingOwn = isViewingOwnProfile();
-    const shouldFilter = !isShowingPrivate || (!viewingOwn && !showOtherUsersPrivateProjects);
 
-    if (shouldFilter) {
-      params.append(privateFilterParam, 'true'); // API filters FOR posted=true
-      if (debugMode) console.log("Filtering API request to show only posted projects (posted=true)");
+    if (viewingOwn) {
+      // User is viewing their own profile, apply filter choice
+      switch (currentVisibilityFilter) {
+        case 'public':
+          params.append(privateFilterParam, 'true'); // API filters FOR posted=true
+          if (debugMode) console.log("[API] Fetching OWN profile - PUBLIC projects (posted=true)");
+          break;
+        case 'private':
+          params.append(privateFilterParam, 'false'); // API filters FOR posted=false
+          if (debugMode) console.log("[API] Fetching OWN profile - PRIVATE projects (posted=false)");
+          break;
+        case 'all':
+          // Do not add the 'posted' param to get all projects
+          if (debugMode) console.log("[API] Fetching OWN profile - ALL projects (no 'posted' filter)");
+          break;
+        default:
+           params.append(privateFilterParam, 'true'); // Default safety: show public
+           if (debugMode) console.warn("[API] Unknown visibility filter, defaulting to PUBLIC (posted=true)");
+           break;
+      }
     } else {
-      // Don't add the 'posted' param, so the API returns all projects (including private)
-      if (debugMode) console.log("Fetching all projects (including private, no 'posted' param)");
+      // User is viewing someone else's profile, ALWAYS filter for public/posted
+      params.append(privateFilterParam, 'true');
+      if (debugMode) console.log("[API] Fetching OTHER profile - FORCING PUBLIC projects (posted=true)");
     }
 
     params.append('sort_by', 'updated_at'); // Adjust sort order if needed based on 'currentSort'
 
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
-    if (debugMode) console.log("Fetching projects:", requestUrl);
+    if (debugMode) console.log("Fetching projects URL:", requestUrl);
 
     const response = await fetch(requestUrl);
     if (!response.ok) {
-      // Handle 403 Forbidden - might indicate user cannot view private projects even if requested
-      if (response.status === 403 && !shouldFilter) {
-         console.warn("Received 403 Forbidden when trying to fetch all projects. User might lack permission for private projects.");
-         // Optionally retry with filtering enabled, or show an error message.
-         // For now, just return empty to avoid breaking.
+       if (response.status === 403) {
+         console.warn(`Received 403 Forbidden fetching projects for filter '${currentVisibilityFilter}'. User might lack permission or API issue.`);
+         // Return empty to avoid breaking, show error in UI if needed
+         document.getElementById('projects-grid').innerHTML = `<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Permission denied to view these projects.</div>`;
+         document.getElementById('projects-loading').style.display = 'none';
          return { data: [], meta: { has_next_page: false } };
       }
       throw new Error(`Failed to fetch projects: ${response.status}`);
@@ -95,12 +109,9 @@ async function fetchProjects(afterCursor = null) {
     const data = await response.json();
 
     if (debugMode) {
-      console.log(`Fetched ${data.projects.data.length} projects, has_next_page: ${data.projects.meta.has_next_page}`);
-      data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}`));
+      console.log(`Fetched ${data.projects.data.length} projects for filter '${currentVisibilityFilter}', has_next_page: ${data.projects.meta.has_next_page}`);
+      // data.projects.data.slice(0, 5).forEach((p, i) => console.log(`Sample project ${i} visibility: ${p?.project?.visibility}, posted: ${p?.project?.posted}`));
     }
-
-    // Filter client-side ONLY if necessary (e.g., API doesn't support perfect filtering, though 'posted' should work)
-    // Let's rely on the API filter for now.
 
     return {
       data: data.projects.data.map(item => ({
@@ -115,7 +126,7 @@ async function fetchProjects(afterCursor = null) {
     console.error('Error fetching projects:', error);
     // Consider showing an error in the UI
     document.getElementById('projects-loading').style.display = 'none';
-    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects.</div>';
+    document.getElementById('projects-grid').innerHTML = '<div style="color: var(--neon-primary); padding: 2rem; text-align: center;">Error loading projects. Please try again later.</div>';
     return { data: [], meta: { has_next_page: false } };
   }
 }
