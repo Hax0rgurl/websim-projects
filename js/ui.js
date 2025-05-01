@@ -285,9 +285,11 @@ function updateVisibilityFilterButtons() {
  * Check if we're viewing our own profile
  */
 function isViewingOwnProfile() {
-  const result = currentUser && currentUser.username === username;
+  const currentUsername = window.currentUsername || (currentUser && currentUser.username);
+  const result = currentUsername && currentUsername === username;
+  
   if (debugMode) {
-    console.log(`isViewingOwnProfile check: currentUser=${currentUser?.username}, username=${username}, result=${result}`);
+    console.log(`isViewingOwnProfile check: currentUsername=${currentUsername}, profile username=${username}, result=${result}`);
   }
   return result;
 }

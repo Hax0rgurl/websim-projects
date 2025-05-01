@@ -73,10 +73,6 @@ function setupActionListeners() {
         });
     });
 
-    // --- Search ---
-    const searchInput = document.getElementById('user-search');
-    const searchToggle = document.getElementById('search-toggle');
-    
     // --- Modal Close Button ---
     const modalCloseBtn = document.querySelector('.modal-close');
     const modalOverlay = document.querySelector('.modal-overlay');
@@ -91,7 +87,7 @@ function setupActionListeners() {
         iframe.src = '';
     };
     
-    // Remove existing listeners first to avoid duplicates
+    // Remove existing listeners to avoid duplicates
     modalCloseBtn.removeEventListener('click', closeModal);
     modalCloseBtn.addEventListener('click', closeModal);
     
@@ -104,12 +100,19 @@ function setupActionListeners() {
     });
 
     // Add escape key listener for modal
-    document.removeEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
-    });
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
-    });
+    document.removeEventListener('keydown', closeModalOnEsc);
+    document.addEventListener('keydown', closeModalOnEsc);
+}
+
+// Extracted to named function to properly remove event listener
+function closeModalOnEsc(e) {
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+        modalOverlay.classList.remove('active');
+        document.querySelector('.modal').classList.remove('active');
+        const iframe = document.querySelector('.modal iframe');
+        if (iframe) iframe.src = '';
+    }
 }
 
 window.setupActionListeners = setupActionListeners;

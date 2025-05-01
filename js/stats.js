@@ -255,16 +255,18 @@ function generateBioText(userStats) {
       if (validProjectsForSort.length > 0) {
           // Safely sort by date with null/undefined checking
           const sortedByDate = [...validProjectsForSort].sort((a, b) => {
-              const dateA = a.project.created_at ? new Date(a.project.created_at).getTime() : 0;
-              const dateB = b.project.created_at ? new Date(b.project.created_at).getTime() : 0;
+              const dateA = a.project && a.project.created_at ? new Date(a.project.created_at).getTime() : 0;
+              const dateB = b.project && b.project.created_at ? new Date(b.project.created_at).getTime() : 0;
               return dateB - dateA; // Newest first
           });
 
           const sortedByViews = [...validProjectsForSort].sort((a, b) =>
-              (b.project.stats.views || 0) - (a.project.stats.views || 0));
+              ((b.project && b.project.stats ? b.project.stats.views : 0) || 0) - 
+              ((a.project && a.project.stats ? a.project.stats.views : 0) || 0));
 
           const sortedByLikes = [...validProjectsForSort].sort((a, b) =>
-              (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
+              ((b.project && b.project.stats ? b.project.stats.likes : 0) || 0) - 
+              ((a.project && a.project.stats ? a.project.stats.likes : 0) || 0));
 
           // Add latest project info
           if (sortedByDate.length > 0 && sortedByDate[0].project) {
@@ -276,7 +278,7 @@ function generateBioText(userStats) {
 
           // Add most viewed project info (if significant views)
           if (sortedByViews.length > 0 && sortedByViews[0].project && 
-              (sortedByViews[0].project.stats.views || 0) > 10) {
+              sortedByViews[0].project.stats && (sortedByViews[0].project.stats.views || 0) > 10) {
             const mostViewedProject = sortedByViews[0].project;
              if (mostViewedProject && mostViewedProject.title) {
                 bioText += `Check out <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title}</a>, which has gathered ${formatNumber(mostViewedProject.stats.views)} views! `;
@@ -285,7 +287,7 @@ function generateBioText(userStats) {
 
           // Add most liked project info (if significant likes)
           if (sortedByLikes.length > 0 && sortedByLikes[0].project && 
-              (sortedByLikes[0].project.stats.likes || 0) > 5) {
+              sortedByLikes[0].project.stats && (sortedByLikes[0].project.stats.likes || 0) > 5) {
             const mostLikedProject = sortedByLikes[0].project;
             if (mostLikedProject && mostLikedProject.title) {
                bioText += `People seem to like <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;

@@ -1,5 +1,5 @@
 // State variables
-let username = '';  // will be set to the project creator's username at runtime
+let username = defaultUsername; 
 let projectsAfterCursor = null;
 let followersAfterCursor = null;
 let followingAfterCursor = null;
@@ -13,34 +13,25 @@ window.currentUserProfile = null;
 // Initialize WebsimSocket and then kick off profile init
 room.initialize().then(async () => {
   try {
-    // Get the signed-in user
+    // Get current user with explicit await to ensure we have it before proceeding
     currentUser = await window.websim.getUser();
     console.log("Current user:", currentUser);
-
-    // Derive which profile to show: use the creator of this project if possible
-    try {
-      const { username: creatorUsername } = await window.websim.getCreatedBy();
-      username = creatorUsername || defaultUsername;
-    } catch (err) {
-      console.error("Error fetching project creator; falling back to defaultUsername:", err);
-      username = defaultUsername;
-    }
-    console.log("Initial profile username set to:", username);
-
-    // If it's your own profile, show all projects (including private) by default
+    
+    // Store the current user's ID and username globally for authorization checks
+    window.currentUserId = currentUser?.id;
+    window.currentUsername = currentUser?.username;
+    
     if (currentUser && currentUser.username === username) {
       currentVisibilityFilter = 'all';
       console.log("Showing all projects by default (own profile)");
     }
   } catch (error) {
-    console.error("Error during initialization of user/profile context:", error);
-    // Fallback to defaultUsername
-    username = defaultUsername;
+    console.error("Error getting current user:", error);
   }
-
+  
   // Enable debug mode to help troubleshoot
   window.debugMode = true;
-
-  // Kick off the profile load
+  
+  // Start the profile load
   await initProfile();
 });

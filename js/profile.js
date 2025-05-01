@@ -41,14 +41,19 @@ async function initProfile() {
     window.currentUserProfile = user;
 
     // --- Determine visibility filter for this profile view ---
-    if (isViewingOwnProfile()) {
+    // Ensure current user is correctly identified
+    const isOwnProfile = isViewingOwnProfile();
+    if (debugMode) console.log(`Profile init: isOwnProfile=${isOwnProfile}, user=${user.username}`);
+    
+    if (isOwnProfile) {
       currentVisibilityFilter = initialOwnVisibilityFilter;    // usually 'all'
     } else {
       currentVisibilityFilter = initialOtherVisibilityFilter;  // usually 'public'
     }
-    // Let the UI adjust controls once projects load
-    // (loadMoreProjects will call updateVisibilityFilterButtons after data arrives)
-
+    
+    // Update visibility filter buttons for the current view
+    updateVisibilityFilterButtons();
+    
     // --- Update Header ---
     document.getElementById('username').textContent = user.username;
     document.getElementById('avatar').src = user.avatar_url || '';
@@ -91,7 +96,7 @@ async function initProfile() {
     // Fetch remaining data concurrently
     Promise.allSettled([
       fetchRecentFollower(),
-      loadMoreProjects(), // This will now use the correct initial isShowingPrivate state
+      loadMoreProjects(), // This will now use the correct initial visibility filter
       fetchUnpostedProjects().then(unpostedCount => {
         updateStatWithPercentile('unposted-count', unpostedCount, 'unposted');
       })

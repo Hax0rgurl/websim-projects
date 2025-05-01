@@ -5,7 +5,9 @@
  */
 async function fetchUserProfile() {
   try {
-    const response = await fetch(`/api/v1/users/${username}`);
+    const response = await fetch(`/api/v1/users/${username}`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch user: ${response.status}`);
     }
@@ -66,14 +68,14 @@ async function fetchProjects(afterCursor = null) {
     
     if (debugMode) console.log(`Fetching projects with filter: ${currentVisibilityFilter}, own profile: ${viewingOwn}`);
 
-    // For private projects specifically, don't add any visibility filters to the API request
-    // The API will return all projects the user has access to, and we'll filter client-side
+    // When viewing own profile and requesting private projects, don't add posted filter
+    // API will return all projects the authenticated user has access to
     if (currentVisibilityFilter === 'private') {
       if (!viewingOwn) {
         if (debugMode) console.log("Not showing private projects for non-owner");
         return { data: [], meta: { has_next_page: false } };
       }
-      // Don't add any filters - we want all projects including private ones
+      // No special params needed for private - we'll filter client-side
     } 
     else if (currentVisibilityFilter === 'public' || !viewingOwn) {
       params.append('posted', 'true');
@@ -85,7 +87,7 @@ async function fetchProjects(afterCursor = null) {
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
 
-    // Critical: Use 'include' instead of 'same-origin' to properly send auth cookies
+    // Ensure we send proper credentials and headers for authorization
     const response = await fetch(requestUrl, {
       credentials: 'include', 
       headers: {
@@ -99,6 +101,11 @@ async function fetchProjects(afterCursor = null) {
     }
     
     const data = await response.json();
+    
+    // Log raw data for debugging private projects
+    if (debugMode && currentVisibilityFilter === 'private') {
+      console.log("Raw API response:", data);
+    }
 
     // Filter out potential null or invalid entries
     const validProjectData = data.projects.data.filter(item => item && item.project);
@@ -111,8 +118,15 @@ async function fetchProjects(afterCursor = null) {
     // When filtering for private projects, explicitly filter by visibility
     let filteredData = validProjectData;
     if (currentVisibilityFilter === 'private') {
-      filteredData = validProjectData.filter(item => item.project.visibility === 'private');
-      if (debugMode) console.log(`Filtered ${validProjectData.length} projects to ${filteredData.length} private projects`);
+      filteredData = validProjectData.filter(item => 
+        item.project && item.project.visibility === 'private'
+      );
+      if (debugMode) {
+        console.log(`Filtered ${validProjectData.length} projects to ${filteredData.length} private projects`);
+        if (filteredData.length === 0) {
+          console.log("No private projects found after filtering. Raw project data:", validProjectData);
+        }
+      }
     }
 
     return {
