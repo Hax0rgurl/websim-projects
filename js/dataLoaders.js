@@ -108,7 +108,9 @@ async function getFriends() {
     while (hasMoreFollowers) {
       const followers = await fetchFollowers(followersAfter);
       followers.data.forEach(item => {
-        allFollowers[item.user.id] = item.user;
+        if (item && item.user) { 
+          allFollowers[item.user.id] = item.user;
+        }
       });
       
       hasMoreFollowers = followers.meta.has_next_page;
@@ -128,7 +130,9 @@ async function getFriends() {
     while (hasMoreFollowing) {
       const following = await fetchFollowing(followingAfter);
       following.data.forEach(item => {
-        allFollowing[item.user.id] = item.user;
+        if (item && item.user) { 
+          allFollowing[item.user.id] = item.user;
+        }
       });
       
       hasMoreFollowing = following.meta.has_next_page;
@@ -168,7 +172,7 @@ async function getFriends() {
   } catch (error) {
     console.error('Error loading friends:', error);
     document.getElementById('friends-loading').style.display = 'none';
-    document.getElementById('friends-count').innerHTML = '0';
+    document.getElementById('friends-count').innerHTML = formatNumber(0);
     document.getElementById('friends-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading friends data</div>`;
   }
 }

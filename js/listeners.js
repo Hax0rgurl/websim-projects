@@ -82,23 +82,33 @@ function setupActionListeners() {
     const modalOverlay = document.querySelector('.modal-overlay');
     const modal = document.querySelector('.modal');
     
-    modalCloseBtn.addEventListener('click', () => {
+    // Fix modal closing - ensure we're using removeEventListener before adding a new one
+    const closeModal = () => {
         modalOverlay.classList.remove('active');
         modal.classList.remove('active');
         // Stop iframe content from playing
         const iframe = modal.querySelector('iframe');
         iframe.src = '';
-    });
+    };
+    
+    // Remove existing listeners first to avoid duplicates
+    modalCloseBtn.removeEventListener('click', closeModal);
+    modalCloseBtn.addEventListener('click', closeModal);
     
     // Also close when clicking the overlay
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            modalOverlay.classList.remove('active');
-            modal.classList.remove('active');
-            // Stop iframe content from playing
-            const iframe = modal.querySelector('iframe');
-            iframe.src = '';
-        }
+    modalOverlay.removeEventListener('click', function(e) {
+        if (e.target === modalOverlay) closeModal();
+    });
+    modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) closeModal();
+    });
+
+    // Add escape key listener for modal
+    document.removeEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
     });
 }
 

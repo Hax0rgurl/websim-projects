@@ -223,7 +223,12 @@ function generateBioText(userStats) {
 
   // --- Proceed with auto-generation ---
   try {
-    const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'a while ago';
+    const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    }) : 'a while ago';
+    
     let bioText = `Hello! My name is ${user.username} and I joined websim on ${joinDate}. `;
 
     const projectsCount = userStats.projects || 0; 
@@ -244,12 +249,16 @@ function generateBioText(userStats) {
     }
 
     if (bioIncludeProjectDetails && projectsData && projectsData.length > 0) {
-      // Sort projects (using currently loaded data) to find examples
+      // Filter out any null or undefined projects first
       const validProjectsForSort = projectsData.filter(p => p && p.project && p.project.stats);
 
       if (validProjectsForSort.length > 0) {
-          const sortedByDate = [...validProjectsForSort].sort((a, b) =>
-              new Date(b.project.created_at) - new Date(a.project.created_at));
+          // Safely sort by date with null/undefined checking
+          const sortedByDate = [...validProjectsForSort].sort((a, b) => {
+              const dateA = a.project.created_at ? new Date(a.project.created_at).getTime() : 0;
+              const dateB = b.project.created_at ? new Date(b.project.created_at).getTime() : 0;
+              return dateB - dateA; // Newest first
+          });
 
           const sortedByViews = [...validProjectsForSort].sort((a, b) =>
               (b.project.stats.views || 0) - (a.project.stats.views || 0));
@@ -258,7 +267,7 @@ function generateBioText(userStats) {
               (b.project.stats.likes || 0) - (a.project.stats.likes || 0));
 
           // Add latest project info
-          if (sortedByDate.length > 0) {
+          if (sortedByDate.length > 0 && sortedByDate[0].project) {
             const latestProject = sortedByDate[0].project;
             if (latestProject && latestProject.title) {
               bioText += `My latest creation is <a href="https://websim.ai/p/${latestProject.id}" style="color: var(--neon-secondary);">${latestProject.title}</a>. `;
@@ -266,7 +275,8 @@ function generateBioText(userStats) {
           }
 
           // Add most viewed project info (if significant views)
-          if (sortedByViews.length > 0 && (sortedByViews[0].project.stats.views || 0) > 10) {
+          if (sortedByViews.length > 0 && sortedByViews[0].project && 
+              (sortedByViews[0].project.stats.views || 0) > 10) {
             const mostViewedProject = sortedByViews[0].project;
              if (mostViewedProject && mostViewedProject.title) {
                 bioText += `Check out <a href="https://websim.ai/p/${mostViewedProject.id}" style="color: var(--neon-secondary);">${mostViewedProject.title}</a>, which has gathered ${formatNumber(mostViewedProject.stats.views)} views! `;
@@ -274,7 +284,8 @@ function generateBioText(userStats) {
           }
 
           // Add most liked project info (if significant likes)
-          if (sortedByLikes.length > 0 && (sortedByLikes[0].project.stats.likes || 0) > 5) {
+          if (sortedByLikes.length > 0 && sortedByLikes[0].project && 
+              (sortedByLikes[0].project.stats.likes || 0) > 5) {
             const mostLikedProject = sortedByLikes[0].project;
             if (mostLikedProject && mostLikedProject.title) {
                bioText += `People seem to like <a href="https://websim.ai/p/${mostLikedProject.id}" style="color: var(--neon-secondary);">${mostLikedProject.title}</a> (${formatNumber(mostLikedProject.stats.likes)} likes). `;

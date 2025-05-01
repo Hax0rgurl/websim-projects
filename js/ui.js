@@ -179,7 +179,7 @@ function sortProjects() {
     if (!projectsData || projectsData.length === 0) {
         // Display a message if no projects match the current filter
         let message = "No projects found.";
-        if (currentVisibilityFilter === 'private') message = "No private projects found.";
+        if (currentVisibilityFilter === 'private') message = "No private projects found. Private projects are only visible to their owner.";
         else if (currentVisibilityFilter === 'public') message = "No public projects found.";
 
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
@@ -197,6 +197,14 @@ function sortProjects() {
 
     // Filter out any potential null/invalid project entries before sorting
     sortedProjects = sortedProjects.filter(p => p && p.project && p.project.stats);
+
+    if (sortedProjects.length === 0) {
+        // After filtering, we might have no projects to show
+        let message = "No projects match the selected filter.";
+        if (currentVisibilityFilter === 'private') message = "No private projects found. Private projects are only visible to their owner.";
+        projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
+        return;
+    }
 
     // Now sort by the chosen criterion
     switch (currentSort) {
