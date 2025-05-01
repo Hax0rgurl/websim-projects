@@ -72,4 +72,4 @@ const publicProjectText = "PUBLIC";
 const unlistedProjectText = "UNLISTED";
 
 // --- Debugging ---
-const debugMode = false; // Set to true for console logs
+const debugMode = true; // Set to true for console logs to help troubleshoot private projects
