@@ -106,15 +106,24 @@ async function getFriends() {
     let hasMoreFollowers = true;
     
     while (hasMoreFollowers) {
-      const followers = await fetchFollowers(followersAfter);
-      followers.data.forEach(item => {
-        if (item && item.user) { 
-          allFollowers[item.user.id] = item.user;
+      try {
+        const followers = await fetchFollowers(followersAfter);
+        if (followers && followers.data) {
+          followers.data.forEach(item => {
+            if (item && item.user) { 
+              allFollowers[item.user.id] = item.user;
+            }
+          });
+          
+          hasMoreFollowers = followers.meta && followers.meta.has_next_page;
+          followersAfter = followers.meta && followers.meta.end_cursor;
+        } else {
+          hasMoreFollowers = false;
         }
-      });
-      
-      hasMoreFollowers = followers.meta.has_next_page;
-      followersAfter = followers.meta.end_cursor;
+      } catch (err) {
+        console.error("Error fetching followers page:", err);
+        hasMoreFollowers = false;
+      }
       
       // Limit the number of API calls to prevent infinite loops
       if (Object.keys(allFollowers).length > 1000) {
@@ -128,15 +137,24 @@ async function getFriends() {
     let hasMoreFollowing = true;
     
     while (hasMoreFollowing) {
-      const following = await fetchFollowing(followingAfter);
-      following.data.forEach(item => {
-        if (item && item.user) { 
-          allFollowing[item.user.id] = item.user;
+      try {
+        const following = await fetchFollowing(followingAfter);
+        if (following && following.data) {
+          following.data.forEach(item => {
+            if (item && item.user) { 
+              allFollowing[item.user.id] = item.user;
+            }
+          });
+          
+          hasMoreFollowing = following.meta && following.meta.has_next_page;
+          followingAfter = following.meta && following.meta.end_cursor;
+        } else {
+          hasMoreFollowing = false;
         }
-      });
-      
-      hasMoreFollowing = following.meta.has_next_page;
-      followingAfter = following.meta.end_cursor;
+      } catch (err) {
+        console.error("Error fetching following page:", err);
+        hasMoreFollowing = false;
+      }
       
       // Limit the number of API calls
       if (Object.keys(allFollowing).length > 1000) {
@@ -166,8 +184,10 @@ async function getFriends() {
     }
     
     friends.forEach(user => {
-      const card = createUserCard(user);
-      friendsGrid.appendChild(card);
+      if (user) {
+        const card = createUserCard(user);
+        friendsGrid.appendChild(card);
+      }
     });
   } catch (error) {
     console.error('Error loading friends:', error);
