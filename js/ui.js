@@ -4,48 +4,40 @@
  * Create a user card element for followers/following/friends views
  */
 function createUserCard(user) {
-  if (!user) return document.createElement('div');
-  
-  const card = document.createElement('a');
-  card.href = `https://websim.ai/@${user.username}`;
+  if (!user || !user.username) return document.createElement('div'); // Basic safety check
+
+  const card = document.createElement('div'); // Use div instead of <a> initially
   card.className = 'user-card';
+  card.dataset.username = user.username; // Store username for click handler
+
   card.innerHTML = `
-    <img class="user-avatar" src="${user.avatar_url || ''}"
+    <img class="user-avatar" src="${user.avatar_url || `https://images.websim.ai/avatar/${user.username}`}"
          alt="${user.username}'s avatar"
          style="width: ${userAvatarSize}px; height: ${userAvatarSize}px;"
          onerror="this.src='https://images.websim.ai/avatar/anonymous'">
     <div class="user-name">${user.username}</div>
   `;
 
+  // Add click listener to navigate within the app
   card.addEventListener('click', async (e) => {
     e.preventDefault();
+    const targetUsername = card.dataset.username;
 
-    // Set username display
-    const usernameEl = document.getElementById('username');
-    usernameEl.textContent = user.username;
-    document.querySelector('.username-hint').classList.add('hidden');
+    if (targetUsername && targetUsername !== username) {
+        // Update the global username state
+        username = targetUsername;
 
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Update the search input visually (optional)
+        document.getElementById('user-search').value = username;
 
-    // Reset data
-    projectsData = [];
-    projectsAfterCursor = null;
-    followersAfterCursor = null;
-    followingAfterCursor = null;
+        // Scroll to top for new profile load
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Clear all grids
-    document.getElementById('projects-grid').innerHTML = '';
-    document.getElementById('followers-grid').innerHTML = '';
-    document.getElementById('following-grid').innerHTML = '';
-    document.getElementById('friends-grid').innerHTML = '';
-
-    // Reset stats displays
-    resetStatsToLoading();
-
-    // Update current username and initialize new profile
-    username = user.username;
-    await initProfile();
+        // Initiate the profile load process
+        await initProfile(); // initProfile handles resets and loading
+    } else {
+         if (debugMode) console.log("Clicked on current user's card, no navigation needed.");
+    }
   });
 
   return card;
@@ -55,17 +47,21 @@ function createUserCard(user) {
  * Create a project card element for projects view
  */
 function createProjectCard(project, project_revision, site) {
-  if (!project) return document.createElement('div');
+  if (!project || !project.id) {
+      if (debugMode) console.warn("Attempted to create card for invalid project:", project);
+      return document.createElement('div'); // Return empty div if project data is invalid
+  }
 
   const card = document.createElement('div');
   card.className = 'card';
-  card.style.position = 'relative';
+  card.style.position = 'relative'; // Needed for absolute positioning of indicator
 
-  // Set border color based on visibility
-  let borderColor = publicProjectBorderColor; // Default to public color
-  let visibilityText = publicProjectText;
+  // Determine border color and visibility text based on project.visibility
+  let borderColor = publicProjectBorderColor; // Default
+  let visibilityText = publicProjectText; // Default
+  const projectVisibility = project.visibility || 'public'; // Default to public if undefined
 
-  switch (project.visibility) {
+  switch (projectVisibility) {
     case 'private':
       borderColor = privateProjectBorderColor;
       visibilityText = privateProjectText;
@@ -75,39 +71,47 @@ function createProjectCard(project, project_revision, site) {
       visibilityText = unlistedProjectText;
       break;
     case 'public':
-      // borderColor remains publicProjectBorderColor
+      borderColor = publicProjectBorderColor;
       visibilityText = publicProjectText;
       break;
     default:
-      // Keep default border if visibility is unknown/null
-      visibilityText = 'UNKNOWN'; // Should not happen often
+       if (debugMode) console.warn(`Unknown project visibility: ${projectVisibility} for project ${project.id}`);
+       visibilityText = projectVisibility.toUpperCase(); // Show the unknown status
       break;
   }
   card.style.borderColor = borderColor;
+  card.style.borderWidth = 'var(--neon-border-width)'; // Ensure border width is applied
+  card.style.borderStyle = 'solid';
 
   // Create preview image or placeholder
-  const previewHtml = site
-    ? `<img class="preview-image"
-            src="https://images.websim.ai/v1/site/${site.id}/600"
-            alt="Preview of ${project.title || 'Untitled Project'}"
-            style="height: ${projectPreviewHeight}px;"
-            loading="lazy"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-       <div class="preview-image placeholder"
-            style="height: ${projectPreviewHeight}px; display: none; justify-content: center; align-items: center; color: var(--text-secondary);">
-         No Preview Available
-       </div>`
-    : `<div class="preview-image placeholder"
-           style="height: ${projectPreviewHeight}px; display: flex; justify-content: center; align-items: center; color: var(--text-secondary);">
-          No Site Generated
-        </div>`;
+   const previewImageUrl = site?.id ? `https://images.websim.ai/v1/site/${site.id}/600` : null;
+   const placeholderText = site?.id ? 'Preview Unavailable' : 'No Site Generated';
+   const projectTitle = project.title || 'Untitled Project';
 
-  // Add visibility indicator if enabled
+   const previewHtml = previewImageUrl
+     ? `<img class="preview-image"
+             src="${previewImageUrl}"
+             alt="Preview of ${projectTitle}"
+             style="height: ${projectPreviewHeight}px;"
+             loading="lazy"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="preview-image placeholder error-placeholder"
+             style="height: ${projectPreviewHeight}px; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: var(--text-secondary);">
+          ${placeholderText}
+        </div>`
+     : `<div class="preview-image placeholder no-site-placeholder"
+            style="height: ${projectPreviewHeight}px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: var(--text-secondary);">
+           ${placeholderText}
+         </div>`;
+
+  // Add visibility indicator only for non-public projects when
   let visibilityIndicator = '';
-  // Always show visibility indicator to help diagnose issues
-  visibilityIndicator = `<div class="project-visibility-indicator" style="color: ${borderColor}; border-color: ${borderColor}; box-shadow: 0 0 5px ${borderColor};">
-    ${visibilityText}
-  </div>`;
+  if (projectVisibility !== 'public' && showVisibilityIndicator) {
+    let indicatorColor = borderColor; // Match border color
+    visibilityIndicator = `<div class="project-visibility-indicator" style="color: ${indicatorColor}; border-color: ${indicatorColor}; box-shadow: 0 0 5px ${indicatorColor};">
+      ${visibilityText}
+    </div>`;
+  }
 
   card.innerHTML = `
     ${visibilityIndicator}
@@ -130,6 +134,14 @@ function createProjectCard(project, project_revision, site) {
   const projectLink = card.querySelector('.project-link');
   projectLink.addEventListener('click', (e) => {
     e.preventDefault();
+
+    // Prevent opening modal for private projects if not owner?
+    // API should prevent loading content anyway, but UI can be clearer
+    if (project.visibility === 'private' && !isViewingOwnProfile()) {
+      // Maybe show a small notification instead?
+      console.log("Cannot view private project of another user.");
+      return;
+    }
 
     const modal = document.querySelector('.modal');
     const overlay = document.querySelector('.modal-overlay');
@@ -166,14 +178,7 @@ function sortProjects() {
     if (!projectsData || projectsData.length === 0) {
         // Display a message if no projects match the current filter
         let message = "No projects found.";
-        if (currentVisibilityFilter === 'private') {
-            const isOwn = isViewingOwnProfile();
-            if (isOwn) {
-              message = "No private projects found. If you have some, they may be hidden by caching or authorization issues.";
-            } else {
-              message = "Private projects are only visible to their creator.";
-            }
-        }
+        if (currentVisibilityFilter === 'private') message = "No private projects found. Private projects are only visible to their owner.";
         else if (currentVisibilityFilter === 'public') message = "No public projects found.";
 
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
@@ -181,19 +186,13 @@ function sortProjects() {
     }
 
     let sortedProjects = [...projectsData];
-    
-    // Apply visibility filtering - FIXED logic for 'all' view to properly include private
+
+    // Apply visibility filter (public / private / all)
     if (currentVisibilityFilter === 'public') {
-      sortedProjects = sortedProjects.filter(p => p.project?.visibility === 'public');
+      sortedProjects = sortedProjects.filter(p => p.project.visibility === 'public');
     } else if (currentVisibilityFilter === 'private') {
-      sortedProjects = sortedProjects.filter(p => p.project?.visibility === 'private');
-    } else if (currentVisibilityFilter === 'unposted') {
-      // For unposted, we rely on the API fetch, but we can double check posted status if available
-      // Note: API might not return 'posted' field in project object, so be careful.
-      // Usually unposted projects might have visibility 'private' anyway.
-      // We mostly trust the API data here.
+      sortedProjects = sortedProjects.filter(p => p.project.visibility === 'private');
     }
-    // 'all' keeps all projects
 
     // Filter out any potential null/invalid project entries before sorting
     sortedProjects = sortedProjects.filter(p => p && p.project && p.project.stats);
@@ -201,11 +200,7 @@ function sortProjects() {
     if (sortedProjects.length === 0) {
         // After filtering, we might have no projects to show
         let message = "No projects match the selected filter.";
-        if (currentVisibilityFilter === 'private') {
-            message = isViewingOwnProfile() ? "No private projects found. Check 'Drafts' for unposted projects." : "You don't have permission to view these projects.";
-        } else if (currentVisibilityFilter === 'unposted') {
-            message = "No drafts found.";
-        }
+        if (currentVisibilityFilter === 'private') message = "No private projects found. Private projects are only visible to their owner.";
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;
     }
@@ -274,9 +269,6 @@ function updateVisibilityFilterButtons() {
             case 'private':
                 projectCountLabel.textContent = '🤫 Private Projects';
                 break;
-            case 'unposted':
-                projectCountLabel.textContent = '📝 Draft Projects';
-                break;
             case 'all':
                  projectCountLabel.textContent = viewingOwn ? '🌐 All Projects' : '🌐 Public Projects'; // Show "All" only for self
                 break;
@@ -292,16 +284,11 @@ function updateVisibilityFilterButtons() {
  * Check if we're viewing our own profile
  */
 function isViewingOwnProfile() {
-  if (!window.currentUsername || !username) {
-    if (debugMode) console.log("Missing username data for own profile check");
-    return false;
-  }
-  
-  // Compare usernames case-insensitively
-  const result = window.currentUsername.toLowerCase() === username.toLowerCase();
+  const currentUsername = window.currentUsername || (currentUser && currentUser.username);
+  const result = currentUsername && currentUsername === username;
   
   if (debugMode) {
-    console.log(`isViewingOwnProfile check: currentUsername=${window.currentUsername}, profile username=${username}, result=${result}`);
+    console.log(`isViewingOwnProfile check: currentUsername=${currentUsername}, profile username=${username}, result=${result}`);
   }
   return result;
 }

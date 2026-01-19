@@ -106,24 +106,15 @@ async function getFriends() {
     let hasMoreFollowers = true;
     
     while (hasMoreFollowers) {
-      try {
-        const followers = await fetchFollowers(followersAfter);
-        if (followers && followers.data) {
-          followers.data.forEach(item => {
-            if (item && item.user) { 
-              allFollowers[item.user.id] = item.user;
-            }
-          });
-          
-          hasMoreFollowers = followers.meta && followers.meta.has_next_page;
-          followersAfter = followers.meta && followers.meta.end_cursor;
-        } else {
-          hasMoreFollowers = false;
+      const followers = await fetchFollowers(followersAfter);
+      followers.data.forEach(item => {
+        if (item && item.user) { 
+          allFollowers[item.user.id] = item.user;
         }
-      } catch (err) {
-        console.error("Error fetching followers page:", err);
-        hasMoreFollowers = false;
-      }
+      });
+      
+      hasMoreFollowers = followers.meta.has_next_page;
+      followersAfter = followers.meta.end_cursor;
       
       // Limit the number of API calls to prevent infinite loops
       if (Object.keys(allFollowers).length > 1000) {
@@ -137,24 +128,15 @@ async function getFriends() {
     let hasMoreFollowing = true;
     
     while (hasMoreFollowing) {
-      try {
-        const following = await fetchFollowing(followingAfter);
-        if (following && following.data) {
-          following.data.forEach(item => {
-            if (item && item.user) { 
-              allFollowing[item.user.id] = item.user;
-            }
-          });
-          
-          hasMoreFollowing = following.meta && following.meta.has_next_page;
-          followingAfter = following.meta && following.meta.end_cursor;
-        } else {
-          hasMoreFollowing = false;
+      const following = await fetchFollowing(followingAfter);
+      following.data.forEach(item => {
+        if (item && item.user) { 
+          allFollowing[item.user.id] = item.user;
         }
-      } catch (err) {
-        console.error("Error fetching following page:", err);
-        hasMoreFollowing = false;
-      }
+      });
+      
+      hasMoreFollowing = following.meta.has_next_page;
+      followingAfter = following.meta.end_cursor;
       
       // Limit the number of API calls
       if (Object.keys(allFollowing).length > 1000) {
@@ -184,10 +166,8 @@ async function getFriends() {
     }
     
     friends.forEach(user => {
-      if (user) {
-        const card = createUserCard(user);
-        friendsGrid.appendChild(card);
-      }
+      const card = createUserCard(user);
+      friendsGrid.appendChild(card);
     });
   } catch (error) {
     console.error('Error loading friends:', error);
@@ -216,32 +196,7 @@ async function loadMoreProjects() {
     // loadMoreBtn.style.display = 'none';
 
     // Fetch projects using the current visibility filter
-    let data = await fetchProjects(projectsAfterCursor);
-
-    // RETRY LOGIC: If looking for private content but found none on first page, try one robust refresh
-    if ((!data || !data.data || data.data.length === 0) && 
-        (currentVisibilityFilter === 'private' || currentVisibilityFilter === 'all' || currentVisibilityFilter === 'unposted') && 
-        !projectsAfterCursor && 
-        !window._hasRetriedPrivateAuth) {
-        
-        if (debugMode) console.log("🕵️ Empty private list. Triggering retry sequence...");
-        
-        const grid = document.getElementById('projects-grid');
-        if (grid) {
-            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--neon-secondary); animation: pulse 1s infinite;">No private projects found. Refreshing auth cookies and trying again...</div>';
-        }
-        
-        window._hasRetriedPrivateAuth = true;
-        
-        // Wait a moment for visual feedback and potential background auth propagation
-        await new Promise(r => setTimeout(r, 1500));
-        
-        // Force refresh again (calls will have new timestamps)
-        await refreshAuthCookies();
-        
-        // Retry fetch
-        data = await fetchProjects(projectsAfterCursor);
-    }
+    const data = await fetchProjects(projectsAfterCursor);
 
     if (!data || !data.data) {
         console.error("Received invalid data from fetchProjects");

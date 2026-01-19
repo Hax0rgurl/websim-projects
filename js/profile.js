@@ -1,8 +1,18 @@
-/**
- * Initialize profile with proper authorization and data loading
- */
+// ===== Profile Initialization =====
+
 async function initProfile() {
   try {
+    // --- Refresh Current User Context ---
+    // Ensure we have the latest auth state (e.g. if user just logged in or refreshed cookies)
+    try {
+        const currentUser = await window.websim.getUser();
+        window.currentUserId = currentUser?.id;
+        window.currentUsername = currentUser?.username;
+        if (debugMode) console.log("Refreshed current user context:", currentUser?.username);
+    } catch (e) {
+        console.warn("Failed to refresh current user:", e);
+    }
+
     // --- Reset UI State ---
     document.getElementById('username').textContent = '';
     document.getElementById('avatar').src = '';
@@ -12,7 +22,6 @@ async function initProfile() {
     window.currentUserProfile = null;
     projectsData = [];
     projectsAfterCursor = null;
-    window._hasRetriedPrivateAuth = false; // Reset retry flag
     followersAfterCursor = null;
     followingAfterCursor = null;
     isLoading = false;
@@ -31,24 +40,6 @@ async function initProfile() {
     document.getElementById('visibility-filter-controls').style.display = 'none';
     document.querySelectorAll('.visibility-button').forEach(b => b.classList.remove('active'));
 
-    // --- CRITICAL AUTH SEQUENCE ---
-    try {
-      // CRITICAL: Get USER FROM WEBSIM first to establish proper auth context
-      currentUser = await window.websim.getUser();
-      window.currentUserId = currentUser?.id;
-      window.currentUsername = currentUser?.username;
-
-      if (debugMode) console.log(" Retrieved current user:", currentUser);
-      
-      // Refresh auth cookies using our centralized function
-      await refreshAuthCookies();
-      
-      if (debugMode) console.log(" Auth initialization sequence completed");
-      
-    } catch (userError) {
-      console.error("Error in auth sequence:", userError);
-    }
-
     // --- Fetch User Profile ---
     const user = await fetchUserProfile();
     if (!user) {
@@ -66,17 +57,9 @@ async function initProfile() {
     if (debugMode) console.log(`Profile init: isOwnProfile=${isOwnProfile}, user=${user.username}`);
     
     if (isOwnProfile) {
-      // For own profile, start with the configured filter
-      if (debugMode) console.log(`Setting visibility filter to ${initialOwnVisibilityFilter} for own profile`);
       currentVisibilityFilter = initialOwnVisibilityFilter;    // usually 'all'
-      
-      // Set active button for visibility filter
-      const visBtn = document.querySelector(`.visibility-button[data-filter="${currentVisibilityFilter}"]`);
-      if (visBtn) visBtn.classList.add('active');
     } else {
-      // For other profiles, always start with public filter
       currentVisibilityFilter = initialOtherVisibilityFilter;  // usually 'public'
-      if (debugMode) console.log(`Setting visibility filter to ${initialOtherVisibilityFilter} for other profile`);
     }
     
     // Update visibility filter buttons for the current view
@@ -97,22 +80,10 @@ async function initProfile() {
     const joinedEl = document.getElementById('joined-count');
     // Display relative join date
     if (user.created_at) {
-      const joinDate = new Date(user.created_at);
-      if (!isNaN(joinDate.getTime())) {
-        joinedEl.classList.add('joined');
-        joinedEl.innerHTML = `${getRelativeTimeString(joinDate)}<div class="ago"> ago</div>`;
-      } else {
-        joinedEl.innerHTML = 'N/A';
-      }
+      joinedEl.classList.add('joined');
+      joinedEl.innerHTML = `${getRelativeTimeString(user.created_at)}<div class="ago"> ago</div>`;
     } else {
       joinedEl.innerHTML = 'N/A';
-    }
-    
-    // --- Set up visibility controls ---
-    if (isOwnProfile) {
-      document.getElementById('visibility-filter-controls').style.display = 'flex';
-    } else {
-      document.getElementById('visibility-filter-controls').style.display = 'none';
     }
     
     // Fetch initial counts and stats
@@ -147,6 +118,8 @@ async function initProfile() {
         }
       });
        if(debugMode) console.log("Initial concurrent data load finished.");
+       // Potentially update bio here if it depends only on initial loads
+       // generateBioText might need more data from loadMoreProjects completion
     });
 
     // Setup listeners (ensure they are only added once or are idempotent)
