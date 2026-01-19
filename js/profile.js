@@ -114,6 +114,10 @@ async function initProfile() {
     } else {
       document.getElementById('visibility-filter-controls').style.display = 'none';
     }
+
+    if (window.debugMode && typeof updateDebugPanel === 'function') {
+        updateDebugPanel();
+    }
     
     // Fetch initial counts and stats
     const [followingCount, followersCount, statsData] = await Promise.all([

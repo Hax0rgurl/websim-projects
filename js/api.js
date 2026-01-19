@@ -101,11 +101,18 @@ async function refreshAuthCookies() {
   if (debugMode) console.log("🔑 Initializing robust auth refresh sequence...");
   
   try {
-    // 1. Ping the main session endpoint with cache buster
-    await fetch(`/api/v1/users/me?_t=${Date.now()}`, { 
+    // 1. Ping the main session endpoint with cache buster and forced reload
+    const meResponse = await fetch(`/api/v1/users/me?_t=${Date.now()}`, { 
       credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache' }
+      cache: 'reload',
+      headers: { 
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
+
+    if (debugMode) console.log(`Auth Probe (Me): ${meResponse.status}`);
 
     // 2. Ping the specific user profile to ensure user context is loaded
     const currentUser = await window.websim.getUser();

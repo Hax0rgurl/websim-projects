@@ -38,6 +38,9 @@ room.initialize().then(async () => {
   
   // Start the profile load
   await initProfile();
+
+  // Initial debug panel update
+  if(window.debugMode && typeof updateDebugPanel === 'function') updateDebugPanel();
   
   // Set up modal closing functionality
   const closeModal = () => {

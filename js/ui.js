@@ -1,6 +1,28 @@
 // ===== UI CREATION FUNCTIONS =====
 
 /**
+ * Update debug panel with current state information
+ */
+function updateDebugPanel() {
+  if (!window.debugMode) return;
+  const panel = document.getElementById('debug-panel');
+  if (!panel) return;
+  
+  const viewingOwn = isViewingOwnProfile();
+  
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <strong>🛠️ Debug Info</strong>
+    <div>User: ${window.currentUsername ? window.currentUsername : '<span style="color:red">NULL</span>'}</div>
+    <div>Profile: ${username}</div>
+    <div>Own Profile: <span style="color:${viewingOwn ? '#0f0' : '#f00'}">${viewingOwn}</span></div>
+    <div>Filter: ${currentVisibilityFilter}</div>
+    <div>Projects: ${projectsData ? projectsData.length : 0}</div>
+    <div>Loading: ${window.isLoading}</div>
+  `;
+}
+
+/**
  * Create a user card element for followers/following/friends views
  */
 function createUserCard(user) {
@@ -209,6 +231,9 @@ function sortProjects() {
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;
     }
+
+    // Update debug info whenever we sort/render
+    if (window.debugMode) updateDebugPanel();
 
     // Now sort by the chosen criterion
     switch (currentSort) {
