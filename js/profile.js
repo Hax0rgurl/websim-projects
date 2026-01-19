@@ -12,6 +12,7 @@ async function initProfile() {
     window.currentUserProfile = null;
     projectsData = [];
     projectsAfterCursor = null;
+    window._hasRetriedPrivateAuth = false; // Reset retry flag
     followersAfterCursor = null;
     followingAfterCursor = null;
     isLoading = false;

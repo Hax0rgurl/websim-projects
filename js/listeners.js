@@ -40,6 +40,7 @@ function setupActionListeners() {
           // Reset project list and reload
           projectsData = [];
           projectsAfterCursor = null;
+          window._hasRetriedPrivateAuth = false; // Reset retry flag
           document.getElementById('projects-grid').innerHTML = '';
           
           // Update UI and fetch new data with the new filter
@@ -58,8 +59,8 @@ function setupActionListeners() {
               // Wait for full auth refresh to complete
               await refreshAuthCookies();
               
-              // More substantial delay for session propagation
-              await new Promise(resolve => setTimeout(resolve, 800));
+              // Brief delay to ensure cookies are fully processed
+              await new Promise(resolve => setTimeout(resolve, 300));
             } catch (e) {
               console.error("Error refreshing auth for private content:", e);
             }

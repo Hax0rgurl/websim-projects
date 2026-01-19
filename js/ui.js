@@ -166,36 +166,17 @@ function sortProjects() {
     if (!projectsData || projectsData.length === 0) {
         // Display a message if no projects match the current filter
         let message = "No projects found.";
-        let refreshButton = '';
         if (currentVisibilityFilter === 'private') {
             const isOwn = isViewingOwnProfile();
             if (isOwn) {
               message = "No private projects found. If you have some, they may be hidden by caching or authorization issues.";
-              refreshButton = `<button id="force-reauth-btn" class="sort-button" style="margin-top: 1rem; border-color: var(--neon-primary); color: var(--neon-primary);">🔄 Force Re-sync Auth</button>`;
             } else {
               message = "Private projects are only visible to their creator.";
             }
         }
         else if (currentVisibilityFilter === 'public') message = "No public projects found.";
 
-        projectsGrid.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">
-            <div>${message}</div>
-            ${refreshButton}
-          </div>
-        `;
-
-        const btn = document.getElementById('force-reauth-btn');
-        if (btn) {
-          btn.onclick = async () => {
-            btn.textContent = "Syncing...";
-            btn.disabled = true;
-            await refreshAuthCookies();
-            projectsData = [];
-            projectsAfterCursor = null;
-            await loadMoreProjects();
-          };
-        }
+        projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;
     }
 

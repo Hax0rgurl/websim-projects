@@ -216,7 +216,32 @@ async function loadMoreProjects() {
     // loadMoreBtn.style.display = 'none';
 
     // Fetch projects using the current visibility filter
-    const data = await fetchProjects(projectsAfterCursor);
+    let data = await fetchProjects(projectsAfterCursor);
+
+    // RETRY LOGIC: If looking for private content but found none on first page, try one robust refresh
+    if ((!data || !data.data || data.data.length === 0) && 
+        (currentVisibilityFilter === 'private' || currentVisibilityFilter === 'all') && 
+        !projectsAfterCursor && 
+        !window._hasRetriedPrivateAuth) {
+        
+        if (debugMode) console.log("🕵️ Empty private list. Triggering retry sequence...");
+        
+        const grid = document.getElementById('projects-grid');
+        if (grid) {
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--neon-secondary); animation: pulse 1s infinite;">No private projects found. Refreshing auth cookies and trying again...</div>';
+        }
+        
+        window._hasRetriedPrivateAuth = true;
+        
+        // Wait a moment for visual feedback and potential background auth propagation
+        await new Promise(r => setTimeout(r, 1500));
+        
+        // Force refresh again (calls will have new timestamps)
+        await refreshAuthCookies();
+        
+        // Retry fetch
+        data = await fetchProjects(projectsAfterCursor);
+    }
 
     if (!data || !data.data) {
         console.error("Received invalid data from fetchProjects");

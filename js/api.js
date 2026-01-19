@@ -101,33 +101,21 @@ async function refreshAuthCookies() {
   if (debugMode) console.log("🔑 Initializing robust auth refresh sequence...");
   
   try {
-    // 1. Ping multiple endpoints to ensure various cookie partitions are updated
-    const endpoints = [
-      '/api/v1/users/me',
-      '/api/v1/notifications',
-      '/api/v1/projects?first=1'
-    ];
-    
-    await Promise.allSettled(endpoints.map(url => 
-      fetch(url, { 
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      })
-    ));
+    // 1. Ping the main session endpoint with cache buster
+    await fetch(`/api/v1/users/me?_t=${Date.now()}`, { 
+      credentials: 'include',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
 
-    // 2. Refresh the internal websim user object
+    // 2. Ping the specific user profile to ensure user context is loaded
     const currentUser = await window.websim.getUser();
     if (currentUser) {
-      window.currentUserId = currentUser.id;
-      window.currentUsername = currentUser.username;
-      
-      // Ping profile specifically
-      await fetch(`/api/v1/users/${currentUser.username}`, { 
+      await fetch(`/api/v1/users/${currentUser.username}?_t=${Date.now()}`, { 
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
       
-      if (debugMode) console.log(`✅ Deep auth refresh completed for @${currentUser.username}`);
+      if (debugMode) console.log(`✅ Auth sequence completed for @${currentUser.username}`);
     }
   } catch (error) {
     console.error("❌ Auth refresh failed:", error);
