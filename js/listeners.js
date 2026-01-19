@@ -58,8 +58,8 @@ function setupActionListeners() {
               // Wait for full auth refresh to complete
               await refreshAuthCookies();
               
-              // Brief delay to ensure cookies are fully processed
-              await new Promise(resolve => setTimeout(resolve, 300));
+              // More substantial delay for session propagation
+              await new Promise(resolve => setTimeout(resolve, 800));
             } catch (e) {
               console.error("Error refreshing auth for private content:", e);
             }
