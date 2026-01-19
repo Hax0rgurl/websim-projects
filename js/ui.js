@@ -1,28 +1,6 @@
 // ===== UI CREATION FUNCTIONS =====
 
 /**
- * Update debug panel with current state information
- */
-function updateDebugPanel() {
-  if (!window.debugMode) return;
-  const panel = document.getElementById('debug-panel');
-  if (!panel) return;
-  
-  const viewingOwn = isViewingOwnProfile();
-  
-  panel.style.display = 'block';
-  panel.innerHTML = `
-    <strong>🛠️ Debug Info</strong>
-    <div>User: ${window.currentUsername ? window.currentUsername : '<span style="color:red">NULL</span>'}</div>
-    <div>Profile: ${username}</div>
-    <div>Own Profile: <span style="color:${viewingOwn ? '#0f0' : '#f00'}">${viewingOwn}</span></div>
-    <div>Filter: ${currentVisibilityFilter}</div>
-    <div>Projects: ${projectsData ? projectsData.length : 0}</div>
-    <div>Loading: ${window.isLoading}</div>
-  `;
-}
-
-/**
  * Create a user card element for followers/following/friends views
  */
 function createUserCard(user) {
@@ -209,13 +187,11 @@ function sortProjects() {
       sortedProjects = sortedProjects.filter(p => p.project?.visibility === 'public');
     } else if (currentVisibilityFilter === 'private') {
       sortedProjects = sortedProjects.filter(p => p.project?.visibility === 'private');
-      // Debug visibility filtering for private projects
-      if (debugMode) {
-        console.log(`📊 After filtering for private: ${sortedProjects.length} projects remain`);
-        if (sortedProjects.length === 0 && projectsData.length > 0) {
-          console.log("❓ Available visibilities:", projectsData.map(p => p.project?.visibility));
-        }
-      }
+    } else if (currentVisibilityFilter === 'unposted') {
+      // For unposted, we rely on the API fetch, but we can double check posted status if available
+      // Note: API might not return 'posted' field in project object, so be careful.
+      // Usually unposted projects might have visibility 'private' anyway.
+      // We mostly trust the API data here.
     }
     // 'all' keeps all projects
 
@@ -226,14 +202,13 @@ function sortProjects() {
         // After filtering, we might have no projects to show
         let message = "No projects match the selected filter.";
         if (currentVisibilityFilter === 'private') {
-            message = isViewingOwnProfile() ? "No private projects found." : "You don't have permission to view these projects.";
+            message = isViewingOwnProfile() ? "No private projects found. Check 'Drafts' for unposted projects." : "You don't have permission to view these projects.";
+        } else if (currentVisibilityFilter === 'unposted') {
+            message = "No drafts found.";
         }
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;
     }
-
-    // Update debug info whenever we sort/render
-    if (window.debugMode) updateDebugPanel();
 
     // Now sort by the chosen criterion
     switch (currentSort) {
@@ -298,6 +273,9 @@ function updateVisibilityFilterButtons() {
         switch (currentVisibilityFilter) {
             case 'private':
                 projectCountLabel.textContent = '🤫 Private Projects';
+                break;
+            case 'unposted':
+                projectCountLabel.textContent = '📝 Draft Projects';
                 break;
             case 'all':
                  projectCountLabel.textContent = viewingOwn ? '🌐 All Projects' : '🌐 Public Projects'; // Show "All" only for self

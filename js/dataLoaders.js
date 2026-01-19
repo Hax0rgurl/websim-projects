@@ -220,7 +220,7 @@ async function loadMoreProjects() {
 
     // RETRY LOGIC: If looking for private content but found none on first page, try one robust refresh
     if ((!data || !data.data || data.data.length === 0) && 
-        (currentVisibilityFilter === 'private' || currentVisibilityFilter === 'all') && 
+        (currentVisibilityFilter === 'private' || currentVisibilityFilter === 'all' || currentVisibilityFilter === 'unposted') && 
         !projectsAfterCursor && 
         !window._hasRetriedPrivateAuth) {
         
@@ -236,19 +236,6 @@ async function loadMoreProjects() {
         // Wait a moment for visual feedback and potential background auth propagation
         await new Promise(r => setTimeout(r, 1500));
         
-        // Attempt to re-establish user identity if missing
-        if (!window.currentUsername) {
-            try {
-                if(debugMode) console.log("🕵️ Attempting to re-fetch current user identity during retry...");
-                const u = await window.websim.getUser();
-                if (u) {
-                    window.currentUsername = u.username;
-                    window.currentUserId = u.id;
-                    if(debugMode) console.log(`✅ Recovered identity: ${u.username}`);
-                }
-            } catch(e) { console.error("Identity recovery failed", e); }
-        }
-
         // Force refresh again (calls will have new timestamps)
         await refreshAuthCookies();
         

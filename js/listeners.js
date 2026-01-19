@@ -47,10 +47,10 @@ function setupActionListeners() {
           updateVisibilityFilterButtons();
           document.getElementById('projects-loading').style.display = 'block';
           
-          // CRITICAL: For private projects, perform thorough auth refresh first
-          if (newFilter === 'private' || newFilter === 'all') {
+          // CRITICAL: For private projects or drafts, perform thorough auth refresh first
+          if (newFilter === 'private' || newFilter === 'all' || newFilter === 'unposted') {
             try {
-              if (debugMode) console.log("🔒 Preparing to load private content");
+              if (debugMode) console.log("🔒 Preparing to load protected content");
               
               // Display loading message while we refresh auth
               document.getElementById('projects-grid').innerHTML = 

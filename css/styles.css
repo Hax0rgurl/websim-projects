@@ -635,28 +635,3 @@ body {
     justify-content: flex-start;
   }
 }
-
-#debug-panel {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(16, 9, 44, 0.9);
-  border: 1px solid var(--neon-primary);
-  padding: 10px;
-  font-family: monospace;
-  font-size: 11px;
-  z-index: 9999;
-  min-width: 200px;
-  color: var(--neon-secondary);
-  pointer-events: none;
-  border-radius: 4px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.5);
-  line-height: 1.4;
-}
-
-#debug-panel strong {
-  color: var(--neon-primary);
-  border-bottom: 1px solid var(--neon-tertiary);
-  display: block;
-  margin-bottom: 4px;
-}

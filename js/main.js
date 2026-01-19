@@ -14,12 +14,18 @@ window.currentUserProfile = null;
 room.initialize().then(async () => {
   try {
     // CRITICAL: Get current user with explicit await to ensure we have it before proceeding
-    currentUser = await window.websim.getUser();
-    window.currentUserId = currentUser?.id;
-    window.currentUsername = currentUser?.username;
+    try {
+      currentUser = await window.websim.getUser();
+      window.currentUserId = currentUser?.id;
+      window.currentUsername = currentUser?.username;
+    } catch (e) {
+      console.warn("Could not get current user context (possibly generic viewer)", e);
+    }
     
     // Force thorough auth refresh before any content loading
-    await refreshAuthCookies();
+    try {
+      await refreshAuthCookies();
+    } catch(e) { console.error("Auth refresh failed", e); }
     
     // Wait a brief moment to ensure auth state is fully processed
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -38,9 +44,6 @@ room.initialize().then(async () => {
   
   // Start the profile load
   await initProfile();
-
-  // Initial debug panel update
-  if(window.debugMode && typeof updateDebugPanel === 'function') updateDebugPanel();
   
   // Set up modal closing functionality
   const closeModal = () => {
