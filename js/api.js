@@ -91,75 +91,36 @@ async function fetchProjects(afterCursor = null) {
 }
 
 /**
- * Improved auth cookie refresh function to ensure private content access
+ * Robust auth cookie refresh function
  */
+let isRefreshingAuth = false;
 async function refreshAuthCookies() {
-  if (debugMode) console.log("🔑 Refreshing auth cookies before fetching projects");
+  if (isRefreshingAuth) return;
+  isRefreshingAuth = true;
+  
+  if (debugMode) console.log("🔑 Initializing robust auth refresh sequence...");
   
   try {
-    // Get current user from websim directly
+    // 1. Ping the main session endpoint
+    await fetch('/api/v1/users/me', { 
+      credentials: 'include',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+
+    // 2. Ping the specific user profile to ensure user context is loaded
     const currentUser = await window.websim.getUser();
-    if (!currentUser || !currentUser.username) {
-      console.error("Failed to get current user from websim");
-      return;
-    }
-    
-    // IMPROVED AUTH SEQUENCE:
-    
-    // 1. First, get a fresh token by accessing API endpoint that requires auth
-    const profileResponse = await fetch(`/api/v1/users/${currentUser.username}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      },
-      cache: 'no-store'
-    });
-    
-    if (!profileResponse.ok) {
-      console.error("Auth refresh failed at profile step:", profileResponse.status);
-      return;
-    }
-    
-    // 2. Access additional endpoint to ensure cookies are properly established
-    const activityResponse = await fetch('/api/v1/activity-feed', {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      },
-      cache: 'no-store'
-    });
-    
-    if (!activityResponse.ok) {
-      console.error("Auth refresh failed at activity feed step:", activityResponse.status);
-    }
-    
-    // 3. Verify auth is working with direct authenticated endpoint access
-    const testResponse = await fetch(`/api/v1/users/${currentUser.username}/projects?first=1&visibility=all`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      },
-      cache: 'no-store'
-    });
-    
-    if (testResponse.ok) {
-      const testData = await testResponse.json();
-      const projectCount = testData?.projects?.data?.length || 0;
-      if (debugMode) console.log(`✅ Auth cookies refreshed successfully. Test returned ${projectCount} project(s)`);
-    } else {
-      console.error("⚠️ Auth cookie refresh test request failed:", testResponse.status);
+    if (currentUser) {
+      await fetch(`/api/v1/users/${currentUser.username}`, { 
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      
+      if (debugMode) console.log(`✅ Auth sequence completed for @${currentUser.username}`);
     }
   } catch (error) {
-    console.error("❌ Error refreshing auth cookies:", error);
+    console.error("❌ Auth refresh failed:", error);
+  } finally {
+    isRefreshingAuth = false;
   }
 }
 

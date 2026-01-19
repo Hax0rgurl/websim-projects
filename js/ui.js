@@ -167,18 +167,12 @@ function sortProjects() {
         // Display a message if no projects match the current filter
         let message = "No projects found.";
         if (currentVisibilityFilter === 'private') {
-            message = "No private projects found. Please try clicking the 'Private' button again or refresh the page.";
-            
-            // Automatically try refreshing auth and reloading after a delay
-            setTimeout(() => {
-              refreshAuthCookies().then(() => {
-                // Reset project list data
-                projectsData = [];
-                projectsAfterCursor = null;
-                // Try loading projects again
-                loadMoreProjects();
-              });
-            }, 1000);
+            const isOwn = isViewingOwnProfile();
+            if (isOwn) {
+              message = "No private projects found. If you have some, they may be hidden by caching or authorization issues.";
+            } else {
+              message = "Private projects are only visible to their creator.";
+            }
         }
         else if (currentVisibilityFilter === 'public') message = "No public projects found.";
 
@@ -210,13 +204,7 @@ function sortProjects() {
         // After filtering, we might have no projects to show
         let message = "No projects match the selected filter.";
         if (currentVisibilityFilter === 'private') {
-            message = "No private projects found. Refreshing auth cookies and trying again...";
-            // Auto-retry authentication refresh on empty private projects
-            refreshAuthCookies().then(() => {
-              setTimeout(() => {
-                loadMoreProjects();
-              }, 1000);
-            });
+            message = isViewingOwnProfile() ? "No private projects found." : "You don't have permission to view these projects.";
         }
         projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">${message}</div>`;
         return;

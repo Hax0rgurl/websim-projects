@@ -105,6 +105,25 @@ function setupActionListeners() {
         });
     });
 
+    // --- Editable Username ---
+    const usernameSpan = document.getElementById('username');
+    if (usernameSpan) {
+        usernameSpan.addEventListener('blur', async () => {
+            const newName = usernameSpan.textContent.trim();
+            if (newName && newName !== username) {
+                username = newName;
+                if (debugMode) console.log("Username edited to:", username);
+                await initProfile();
+            }
+        });
+        usernameSpan.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                usernameSpan.blur();
+            }
+        });
+    }
+
     // --- Modal Close Button ---
     const modalCloseBtn = document.querySelector('.modal-close');
     const modalOverlay = document.querySelector('.modal-overlay');
