@@ -77,9 +77,9 @@ async function fetchProjects(afterCursor = null) {
         params.append('posted', 'true');
         params.append('visibility', 'public');
     } else if (viewingOwn && currentVisibilityFilter === 'private') {
-        // Explicitly ask for private visibility. 
-        // We avoid sending 'posted=true' as it might default to filtering out private/unposted content depending on API logic.
-        params.append('visibility', 'private');
+        // Fetch all projects (no filter) and let client-side filtering handle it.
+        // This ensures we don't miss private projects if the API ignores the visibility param.
+        // We don't append 'posted=true' to ensure we get everything.
     } else if (!viewingOwn) {
         // Viewing someone else -> force public/posted
         params.append('posted', 'true');

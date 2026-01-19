@@ -223,6 +223,14 @@ async function loadMoreProjects() {
         projectsAfterCursor = data.meta.end_cursor;
         isLoading = false;
 
+        // If we filtered out everything in this batch (e.g. searching for private projects in a page of public ones),
+        // we should immediately try to load the next batch to find matches.
+        if (data.data.length === 0 && currentVisibilityFilter === 'private') {
+             if (debugMode) console.log("Filtered batch was empty, auto-loading next page...");
+             loadMoreProjects();
+             return;
+        }
+
         // Setup infinite scroll
         const scrollHandler = () => {
           const projectsViewActive = document.getElementById('projects-view').style.display !== 'none';
@@ -237,6 +245,9 @@ async function loadMoreProjects() {
         };
         // Add listener with passive option for better performance
         window.addEventListener('scroll', scrollHandler, { passive: true });
+        
+        // Initial check in case content is short/empty
+        scrollHandler();
 
     } else {
         // --- All projects loaded for the current filter ---
