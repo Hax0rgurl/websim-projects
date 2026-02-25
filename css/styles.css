@@ -513,6 +513,27 @@ body {
   margin-bottom: 0.5rem;
 }
 
+pre {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--neon-tertiary);
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--neon-secondary);
+}
+
+pre code {
+  color: #ddd;
+  display: block;
+  white-space: pre;
+}
+
 .security-note {
   margin-top: 2rem;
   padding: 1rem;
