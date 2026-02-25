@@ -450,6 +450,95 @@ body {
   color: var(--text-secondary);
 }
 
+/* Privacy Page Styles */
+.back-link {
+  color: var(--neon-secondary);
+  text-decoration: none;
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--neon-secondary);
+  border-radius: 4px;
+  transition: all 0.2s;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.back-link:hover {
+  background: var(--neon-secondary);
+  color: #000;
+  box-shadow: 0 0 10px var(--neon-secondary);
+}
+
+.explanation-content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+}
+
+.intro {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+.explanation-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--neon-tertiary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0 5px rgba(191, 0, 255, 0.2);
+}
+
+.explanation-card h2 {
+  color: var(--neon-secondary);
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+  text-shadow: 0 0 5px rgba(0, 238, 255, 0.5);
+}
+
+.explanation-card.warning {
+  border-color: var(--neon-primary);
+}
+
+.explanation-card.warning h2 {
+  color: var(--neon-primary);
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+}
+
+.explanation-card ul {
+  list-style-position: inside;
+  margin-left: 1rem;
+}
+
+.explanation-card li {
+  margin-bottom: 0.5rem;
+}
+
+.security-note {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(255, 0, 255, 0.1);
+  border-left: 4px solid var(--neon-primary);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.info-link {
+  color: var(--neon-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: all 0.2s;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.info-link:hover {
+  border-color: var(--neon-secondary);
+  box-shadow: 0 0 10px var(--neon-secondary);
+  text-shadow: 0 0 5px var(--neon-secondary);
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

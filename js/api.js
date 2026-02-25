@@ -72,21 +72,16 @@ async function fetchProjects(afterCursor = null) {
     const viewingOwn = isViewingOwnProfile(); // Ensure this check uses up-to-date info
 
     // Determine API parameters based on filter and ownership
-    // Prioritize explicit visibility parameter if known to better guide the API
-    if (currentVisibilityFilter === 'public') {
+    if (currentVisibilityFilter === 'public' || (!viewingOwn && currentVisibilityFilter !== 'private')) {
+        // Fetch only public/posted projects if filtering for public OR if viewing another user (unless specifically asking for their private, which shouldn't happen)
         params.append('posted', 'true');
-        params.append('visibility', 'public');
-    } else if (viewingOwn && currentVisibilityFilter === 'private') {
-        // Fetch all projects (no filter) and let client-side filtering handle it.
-        // This ensures we don't miss private projects if the API ignores the visibility param.
-        // We don't append 'posted=true' to ensure we get everything.
-    } else if (!viewingOwn) {
-        // Viewing someone else -> force public/posted
-        params.append('posted', 'true');
+        if (debugMode) console.log(`[API] Fetching projects for '${username}' with filter '${currentVisibilityFilter}', own=${viewingOwn}. Using: posted=true`);
+    } else {
+        // Fetch potentially *all* projects if viewing own profile (for 'all' or 'private' filters)
+        // The API should return only projects the authenticated user is allowed to see.
+        // We will filter client-side for 'private' if needed.
+        if (debugMode) console.log(`[API] Fetching projects for '${username}' with filter '${currentVisibilityFilter}', own=${viewingOwn}. Using: NO posted filter (fetch all accessible)`);
     }
-    // For 'all' on own profile, we omit specific filters to try and get everything
-    
-    if (debugMode) console.log(`[API] Fetching projects for '${username}' with filter '${currentVisibilityFilter}', own=${viewingOwn}. Params: ${params.toString()}`);
 
     const requestUrl = `/api/v1/users/${username}/projects?${params}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
@@ -94,11 +89,9 @@ async function fetchProjects(afterCursor = null) {
     // ALWAYS include credentials for project fetching as permissions depend on the requester
     const response = await fetch(requestUrl, {
       credentials: 'include',
-      cache: 'no-store', // Ensure we don't serve stale cached data, especially for auth-dependent content
       headers: {
         'Accept': 'application/json',
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
+        // 'X-Requested-With': 'XMLHttpRequest' // Generally not needed for standard fetch
       }
     });
 

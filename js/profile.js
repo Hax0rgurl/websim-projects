@@ -2,17 +2,6 @@
 
 async function initProfile() {
   try {
-    // --- Refresh Current User Context ---
-    // Ensure we have the latest auth state (e.g. if user just logged in or refreshed cookies)
-    try {
-        const currentUser = await window.websim.getUser();
-        window.currentUserId = currentUser?.id;
-        window.currentUsername = currentUser?.username;
-        if (debugMode) console.log("Refreshed current user context:", currentUser?.username);
-    } catch (e) {
-        console.warn("Failed to refresh current user:", e);
-    }
-
     // --- Reset UI State ---
     document.getElementById('username').textContent = '';
     document.getElementById('avatar').src = '';
