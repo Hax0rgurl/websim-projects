@@ -59,40 +59,115 @@ async function fetchFollowersCount() {
 }
 
 /**
+ * Helper: fetch all project pages for a user using cursor-based pagination.
+ * This aggressively pages through all accessible project pages (uses credentials)
+ * and returns the concatenated raw items array (data.projects.data).
+ */
+async function fetchAllUserProjects(usernameToFetch) {
+  const allItems = [];
+  let hasNext = true;
+  let after = null;
+  const pageSize = Math.max(50, Math.min(200, projectBatchSize || 100)); // sensible bounds
+
+  while (hasNext) {
+    try {
+      const params = new URLSearchParams();
+      params.append('first', pageSize.toString());
+      if (after) params.append('after', after);
+
+      // Do not force 'posted' here so owner can receive private/unposted items if authorized
+      const url = `/api/v1/users/${usernameToFetch}/projects?${params.toString()}`;
+      if (debugMode) console.log(`[API] fetchAllUserProjects fetching: ${url}`);
+
+      const res = await fetch(url, { credentials: 'include', headers: { 'Accept': 'application/json' } });
+      if (!res.ok) {
+        // If we get a 403/404 while paging, stop and return what we have
+        if (res.status === 403 || res.status === 404) {
+          if (debugMode) console.warn(`Stopped paging projects due to ${res.status}`);
+          break;
+        }
+        throw new Error(`Failed to fetch projects page: ${res.status}`);
+      }
+
+      const json = await res.json();
+      const pageItems = (json?.projects?.data) || [];
+      allItems.push(...pageItems);
+
+      hasNext = Boolean(json?.projects?.meta?.has_next_page);
+      after = json?.projects?.meta?.end_cursor || null;
+
+      // Safety guard
+      if (allItems.length > 5000) {
+        console.warn('fetchAllUserProjects reached safety limit of 5000 items, stopping.');
+        break;
+      }
+    } catch (err) {
+      console.error('Error in fetchAllUserProjects:', err);
+      break;
+    }
+  }
+
+  return {
+    data: allItems,
+    meta: { has_next_page: false } // We return complete set; pagination meta isn't meaningful here
+  };
+}
+
+/**
  * Fetch a user's projects with pagination based on the current visibility filter.
  * Handles 'public', 'private', and 'all' filters.
  * API enforces permissions for viewing private projects.
  */
 async function fetchProjects(afterCursor = null) {
   try {
+    const viewingOwn = isViewingOwnProfile(); // Ensure this check uses up-to-date info
+
+    // If the viewer is the owner and we're asked for 'all' or 'private', use the full paginator
+    if (viewingOwn && (currentVisibilityFilter === 'all' || currentVisibilityFilter === 'private')) {
+      if (debugMode) console.log(`[API] Owner view & filter='${currentVisibilityFilter}' -> using fetchAllUserProjects`);
+      const allPages = await fetchAllUserProjects(username);
+      // allPages.data contains raw items like data.projects.data pages concatenated
+      const validProjectData = (allPages.data || []).filter(item => item && item.project && item.project.id);
+
+      // Client-side filter if specifically asked for private
+      let finalData = validProjectData;
+      if (currentVisibilityFilter === 'private') {
+        finalData = validProjectData.filter(item => item.project.visibility === 'private');
+      }
+
+      if (debugMode) {
+        console.log(`fetchProjects(owner, ${currentVisibilityFilter}) returned ${finalData.length} items`);
+      }
+
+      return {
+        data: finalData.map(item => ({
+          project: item.project,
+          project_revision: item.project_revision,
+          site: item.site,
+          cursor: item.cursor
+        })),
+        meta: { has_next_page: false }
+      };
+    }
+
+    // Non-owner or public-only flows: request a single page (server should handle 'posted' filter)
     const params = new URLSearchParams();
     if (afterCursor) params.append('after', afterCursor);
     params.append('first', projectBatchSize.toString());
 
-    const viewingOwn = isViewingOwnProfile(); // Ensure this check uses up-to-date info
-
-    // Determine API parameters based on filter and ownership
-    if (currentVisibilityFilter === 'public' || (!viewingOwn && currentVisibilityFilter !== 'private')) {
-        // Fetch only public/posted projects if filtering for public OR if viewing another user (unless specifically asking for their private, which shouldn't happen)
-        params.append('posted', 'true');
-        if (debugMode) console.log(`[API] Fetching projects for '${username}' with filter '${currentVisibilityFilter}', own=${viewingOwn}. Using: posted=true`);
+    if (currentVisibilityFilter === 'public' || !viewingOwn) {
+      params.append('posted', 'true');
+      if (debugMode) console.log(`[API] Fetching public projects for '${username}' with posted=true`);
     } else {
-        // Fetch potentially *all* projects if viewing own profile (for 'all' or 'private' filters)
-        // The API should return only projects the authenticated user is allowed to see.
-        // We will filter client-side for 'private' if needed.
-        if (debugMode) console.log(`[API] Fetching projects for '${username}' with filter '${currentVisibilityFilter}', own=${viewingOwn}. Using: NO posted filter (fetch all accessible)`);
+      if (debugMode) console.log(`[API] Fetching projects for '${username}' without posted filter`);
     }
 
-    const requestUrl = `/api/v1/users/${username}/projects?${params}`;
+    const requestUrl = `/api/v1/users/${username}/projects?${params.toString()}`;
     if (debugMode) console.log("Fetching projects URL:", requestUrl);
 
-    // ALWAYS include credentials for project fetching as permissions depend on the requester
     const response = await fetch(requestUrl, {
       credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        // 'X-Requested-With': 'XMLHttpRequest' // Generally not needed for standard fetch
-      }
+      headers: { 'Accept': 'application/json' }
     });
 
     if (!response.ok) {
@@ -101,66 +176,36 @@ async function fetchProjects(afterCursor = null) {
 
     const data = await response.json();
 
-    // Log raw data for debugging private projects when viewing own profile
-    if (debugMode && viewingOwn) {
-      console.log(`Raw API response for projects (filter: ${currentVisibilityFilter}):`, JSON.stringify(data, null, 2));
-    }
+    // Defensive extraction of items
+    const rawItems = data?.projects?.data || [];
+    const validProjectData = rawItems.filter(item => item && item.project && item.project.id);
 
-    // Filter out potential null or invalid project entries returned by the API
-    const validProjectData = data.projects.data.filter(item => item && item.project && item.project.id);
-
-    if (debugMode && viewingOwn) {
-        const projectVisibilities = validProjectData.map(p => `${p.project.id}: ${p.project.visibility}`);
-        console.log(`Projects received from API (${validProjectData.length}):`, projectVisibilities);
-    }
-
-
-    // Perform client-side filtering ONLY if needed (specifically for the 'private' filter)
+    // Client-side filtering for public as a safety net
     let finalData = validProjectData;
-    if (currentVisibilityFilter === 'private') {
-      if (viewingOwn) {
-        finalData = validProjectData.filter(item =>
-          item.project && item.project.visibility === 'private'
-        );
-        if (debugMode) {
-          console.log(`Client-side filtered for PRIVATE: ${finalData.length} projects matched.`);
-          if (finalData.length === 0 && validProjectData.length > 0) {
-              console.log("No projects matched 'private' filter client-side. Original visibilities received:", validProjectData.map(p => p.project.visibility));
-          }
-        }
-      } else {
-        // Should not be able to select 'private' for others, but defensively clear data
-        finalData = [];
-        if (debugMode) console.log("Cleared project data because 'private' filter selected for non-owner.");
-      }
-    } else if (currentVisibilityFilter === 'public') {
-        // While posted=true should handle this server-side, add a client-side check for robustness
-        finalData = validProjectData.filter(item => item.project && item.project.visibility === 'public');
-         if (debugMode && finalData.length !== validProjectData.length) {
-             console.log(`Client-side filtered for PUBLIC: ${finalData.length} projects matched (originally ${validProjectData.length}).`);
-         }
+    if (currentVisibilityFilter === 'public') {
+      finalData = validProjectData.filter(item => item.project.visibility === 'public');
+    } else if (currentVisibilityFilter === 'private') {
+      // If we somehow reach here for private (non-owner), return empty set
+      finalData = [];
     }
-    // 'all' filter uses all validProjectData returned by the API (for the owner)
-
 
     return {
       data: finalData.map(item => ({
         project: item.project,
         project_revision: item.project_revision,
         site: item.site,
-        cursor: item.cursor // Ensure cursor is passed correctly
+        cursor: item.cursor
       })),
-      meta: data.projects.meta // Pass metadata for pagination
+      meta: data.projects?.meta || { has_next_page: false }
     };
   } catch (error) {
     console.error('Error fetching projects:', error);
     document.getElementById('projects-loading').style.display = 'none';
     const grid = document.getElementById('projects-grid');
-    if (grid) { // Check if grid exists before manipulating
-        grid.innerHTML =
+    if (grid) {
+      grid.innerHTML =
         '<div style="color: var(--neon-primary); padding: 2rem; text-align: center; grid-column: 1 / -1;">Error loading projects. Please try refreshing.</div>';
     }
-    // Return empty state to prevent breaking downstream logic
     return { data: [], meta: { has_next_page: false } };
   }
 }
